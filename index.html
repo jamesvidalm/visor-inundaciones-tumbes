@@ -1,0 +1,346 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visor de Inundaciones - Tumbes</title>
+
+  <link rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: #17345a;
+      background: #f3f6fb;
+    }
+
+    header {
+      padding: 16px 22px;
+      background: white;
+      border-bottom: 1px solid #dce4ef;
+    }
+
+    header h1 { margin: 0 0 6px; font-size: 22px; }
+    header p { margin: 0; color: #64748b; font-size: 14px; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 350px minmax(0, 1fr);
+      min-height: calc(100vh - 76px);
+    }
+
+    aside {
+      padding: 18px;
+      background: white;
+      border-right: 1px solid #dce4ef;
+      overflow-y: auto;
+    }
+
+    .section { margin-bottom: 22px; }
+    .section h3 { margin: 0 0 12px; font-size: 15px; }
+
+    select, button {
+      padding: 10px;
+      border: 1px solid #d3deeb;
+      border-radius: 7px;
+      background: white;
+      color: #17345a;
+      cursor: pointer;
+    }
+
+    select { width: 100%; }
+
+    .primary {
+      background: #1467ce;
+      color: white;
+      border-color: #1467ce;
+      font-weight: bold;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .metric {
+      border: 1px solid #dce4ef;
+      border-radius: 10px;
+      padding: 12px;
+      min-height: 105px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 23px;
+      color: #1769cc;
+      margin-bottom: 7px;
+    }
+
+    .metric span { font-size: 12px; color: #526782; }
+
+    .notice {
+      background: #edf5ff;
+      border-left: 4px solid #2675d8;
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      border-radius: 5px;
+    }
+
+    .layer {
+      display: block;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+
+    #map { min-height: 600px; width: 100%; }
+
+    footer {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 760px) {
+      .layout { grid-template-columns: 1fr; }
+      #map { min-height: 55vh; grid-row: 1; }
+      aside { border-right: 0; }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>🌊 Visor de Inundaciones — Tumbes</h1>
+    <p>Pronóstico hidrológico · Escenarios hidráulicos · Impacto potencial</p>
+  </header>
+
+  <div class="layout">
+    <aside>
+      <div class="section">
+        <h3>Zona de estudio</h3>
+        <select id="zona">
+          <option value="tumbes">Tumbes urbano</option>
+          <option value="corrales">Corrales</option>
+          <option value="san-jacinto">San Jacinto</option>
+          <option value="la-cruz">La Cruz</option>
+        </select>
+      </div>
+
+      <div class="section">
+        <h3>Escenario de caudal del río (m³/s)</h3>
+        <select id="caudal">
+          <option value="50">50 m³/s</option>
+          <option value="75">75 m³/s</option>
+          <option value="100" selected>100 m³/s</option>
+          <option value="150">150 m³/s</option>
+          <option value="300">300 m³/s</option>
+        </select>
+        <p id="estadoCaudal">Escenario seleccionado: 100 m³/s</p>
+      </div>
+
+      <div class="section">
+        <h3>Impacto potencial</h3>
+        <div class="metric-grid">
+          <div class="metric">
+            <strong id="area">Pendiente</strong>
+            <span>Área inundada (ha)</span>
+          </div>
+          <div class="metric">
+            <strong id="viviendas">Pendiente</strong>
+            <span>Edificaciones expuestas</span>
+          </div>
+          <div class="metric">
+            <strong id="poblacion">Pendiente</strong>
+            <span>Población expuesta</span>
+          </div>
+          <div class="metric">
+            <strong id="centros">Pendiente</strong>
+            <span>Centros poblados afectados</span>
+          </div>
+        </div>
+        <p class="notice">
+          Los indicadores se mostrarán cuando se carguen los resultados
+          reales de las simulaciones y el análisis de exposición.
+          El caudal seleccionado por sí solo no determina el impacto.
+        </p>
+      </div>
+
+      <div class="section">
+        <h3>Capas del mapa</h3>
+        <label class="layer">
+          <input type="checkbox" id="satellite" checked>
+          Imagen satelital
+        </label>
+        <label class="layer">
+          <input type="checkbox" id="river" checked>
+          Ríos y quebradas
+        </label>
+        <label class="layer">
+          <input type="checkbox" id="flood" checked>
+          Mancha de inundación
+        </label>
+        <p class="notice" id="layerStatus">
+          Las capas hidráulicas se conectarán cuando publiquemos
+          los archivos geográficos de Tumbes.
+        </p>
+      </div>
+
+      <div class="section">
+        <h3>Pronóstico hidrológico</h3>
+        <p id="forecastStatus" class="notice">
+          Pronósticos GFS, ECMWF y caudales de El Tigre:
+          pendientes de conectar con los archivos publicados.
+        </p>
+        <button id="reload">Actualizar datos</button>
+      </div>
+
+      <footer>
+        Visor de investigación. No constituye una alerta oficial.
+        Para emergencias, consulta a las autoridades competentes.
+        <p id="updated">Datos: aún no conectados.</p>
+      </footer>
+    </aside>
+
+    <main id="map"></main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map("map").setView([-3.5669, -80.4515], 12);
+
+    const satellite = L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      { attribution: "Tiles © Esri" }
+    ).addTo(map);
+
+    const streets = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      { attribution: "© OpenStreetMap contributors" }
+    );
+
+    const layerControl = L.control.layers({
+      "Imagen satelital": satellite,
+      "Mapa de calles": streets
+    }).addTo(map);
+
+    let floodLayer = null;
+    let riverLayer = null;
+
+    const zoneCenters = {
+      "tumbes": [-3.5669, -80.4515],
+      "corrales": [-3.603, -80.480],
+      "san-jacinto": [-3.642, -80.445],
+      "la-cruz": [-3.636, -80.590]
+    };
+
+    document.getElementById("zona").addEventListener("change", e => {
+      const center = zoneCenters[e.target.value];
+      if (center) map.setView(center, 13);
+    });
+
+    document.getElementById("caudal").addEventListener("change", e => {
+      document.getElementById("estadoCaudal").textContent =
+        "Escenario seleccionado: " + e.target.value + " m³/s";
+
+      cargarMancha(e.target.value);
+    });
+
+    async function cargarGeoJSON(url, nombre, estilo) {
+      const response = await fetch(url + "?v=" + Date.now());
+      if (!response.ok) throw new Error("Archivo no disponible: " + url);
+
+      const geojson = await response.json();
+      return L.geoJSON(geojson, { style: estilo, pane: "overlayPane" });
+    }
+
+    async function cargarMancha(caudal) {
+      const status = document.getElementById("layerStatus");
+
+      try {
+        const nueva = await cargarGeoJSON(
+          `manchas/Q${String(caudal).padStart(3, "0")}.geojson`,
+          "mancha",
+          { color: "#0878df", weight: 1, fillColor: "#2389ee", fillOpacity: 0.4 }
+        );
+
+        if (floodLayer) {
+          map.removeLayer(floodLayer);
+          layerControl.removeLayer(floodLayer);
+        }
+
+        floodLayer = nueva;
+        layerControl.addOverlay(floodLayer, "Inundación Q=" + caudal + " m³/s");
+
+        if (document.getElementById("flood").checked) {
+          floodLayer.addTo(map);
+        }
+
+        status.textContent = "Mancha cargada para Q=" + caudal + " m³/s.";
+      } catch (error) {
+        status.textContent =
+          "No existe una mancha publicada para Q=" + caudal +
+          " m³/s. Publica el GeoJSON del escenario para visualizarlo.";
+      }
+    }
+
+    document.getElementById("satellite").addEventListener("change", e => {
+      if (e.target.checked) {
+        if (!map.hasLayer(satellite)) map.addLayer(satellite);
+        if (map.hasLayer(streets)) map.removeLayer(streets);
+      } else {
+        if (map.hasLayer(satellite)) map.removeLayer(satellite);
+        if (!map.hasLayer(streets)) map.addLayer(streets);
+      }
+    });
+
+    document.getElementById("flood").addEventListener("change", e => {
+      if (!floodLayer) return;
+      if (e.target.checked) floodLayer.addTo(map);
+      else map.removeLayer(floodLayer);
+    });
+
+    document.getElementById("river").addEventListener("change", e => {
+      if (!riverLayer) return;
+      if (e.target.checked) riverLayer.addTo(map);
+      else map.removeLayer(riverLayer);
+    });
+
+    async function actualizarDatos() {
+      const status = document.getElementById("forecastStatus");
+
+      try {
+        const response = await fetch("data/estado.json?v=" + Date.now());
+        if (!response.ok) throw new Error("Estado aún no publicado");
+
+        const data = await response.json();
+        document.getElementById("updated").textContent =
+          "Última actualización: " + (data.actualizado || "No disponible");
+
+        status.textContent =
+          "Estado de publicación: " + (data.estado || "Sin especificar") +
+          ". Los hidrogramas se conectarán en el siguiente paso.";
+      } catch (error) {
+        document.getElementById("updated").textContent =
+          "Datos: esperando la primera publicación.";
+        status.textContent =
+          "Todavía no hay archivos de pronóstico publicados. El mapa base está disponible.";
+      }
+    }
+
+    document.getElementById("reload").addEventListener("click", async () => {
+      await actualizarDatos();
+      await cargarMancha(document.getElementById("caudal").value);
+    });
+
+    actualizarDatos();
+    cargarMancha(document.getElementById("caudal").value);
+  </script>
+</body>
+</html>
