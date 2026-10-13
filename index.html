@@ -1,104 +1,1761 @@
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tumbes | Estilo B Geoespacial</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HidroTumbes | Sistema de Pronóstico de Inundaciones</title>
 
-:root{--bg:#edf5f4;--panel:#fff;--text:#183d42;--muted:#647d80;--line:#d7e7e4;--soft:#e4f3ef;--accent:#087e83;--accent2:#70a83b}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px 'Segoe UI',Arial,sans-serif}header{display:flex;justify-content:space-between;align-items:center;gap:20px;background:#123f43;color:#fff;padding:24px 30px}h1{font-size:24px;margin:7px 0}header p{color:#c4dfd9;margin:0}.eyebrow{font-size:10px;letter-spacing:1.5px;color:var(--accent);font-weight:700}.header-meta{background:#20565a;padding:13px 17px;border-radius:8px}.header-meta span,.header-meta strong{display:block}.header-meta span{font-size:10px;color:#c4dfd9;margin-bottom:5px}nav{display:flex;gap:7px;padding:12px 24px;background:#fff;border-bottom:1px solid var(--line);overflow:auto}button,select{font:inherit;padding:10px 12px;border:1px solid var(--line);background:white;color:var(--text);border-radius:8px;cursor:pointer}nav button{white-space:nowrap}nav button.active{background:var(--accent);border-color:var(--accent);color:#fff}main{max-width:1700px;margin:auto;padding:24px}.page{display:none}.page.active{display:block}.page-title{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:20px}.page-title h2{font-size:26px;margin:6px 0}.page-title p,.note{color:var(--muted);line-height:1.55}.pill{font-size:11px;padding:8px 11px;background:#d8eeea;color:#07666b;border-radius:20px}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin-bottom:18px}.metric,.panel{background:white;border:1px solid var(--line);border-radius:13px;padding:19px;min-width:0;box-shadow:0 3px 12px #173c4210}.metric{background:linear-gradient(145deg,#fff,#f6fbfa)}.metric span,.metric small{display:block;color:var(--muted)}.metric strong{display:block;font-size:24px;margin:12px 0;color:var(--accent)}.metric small{font-size:11px}.columns{display:grid;grid-template-columns:1.15fr .85fr;gap:17px}.panel h3{margin:0 0 16px;font-size:16px}.map{height:350px;border-radius:9px;background:var(--soft)}.map.tall{height:600px}.chart{height:290px}.chart.large{height:390px}.list-row{display:flex;gap:13px;padding:15px 0;border-bottom:1px solid var(--line)}.list-row>span{color:var(--accent);font-weight:700}.list-row b,.list-row small{display:block}.list-row small{color:var(--muted);margin-top:5px}.notice{padding:14px;background:#e7f5f1;border-left:4px solid var(--accent);border-radius:7px;line-height:1.55;margin-top:17px}.flood-layout{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:17px}.toolbar{display:flex;align-items:center;gap:12px;margin-bottom:12px}.summary-line{display:flex;justify-content:space-between;gap:10px;padding:14px 0;border-bottom:1px solid var(--line)}table{border-collapse:collapse;width:100%;min-width:550px}th,td{text-align:left;padding:14px;border-bottom:1px solid var(--line)}th{font-size:11px;color:var(--muted);text-transform:uppercase}.table-wrap{overflow:auto}footer{padding:20px 28px;color:var(--muted);border-top:1px solid var(--line);background:#fff;font-size:11px}@media(max-width:850px){.metrics{grid-template-columns:repeat(2,1fr)}.columns,.flood-layout{grid-template-columns:1fr}main{padding:14px}.header-meta{display:none}}@media(max-width:520px){header{padding:16px}.page-title{display:block}.pill{display:inline-block;margin-top:10px}}
+  <!-- Librerías de mapas y gráficos -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 
-</style>
+  <style>
+    :root {
+      --bg: #f3f7f8;
+      --panel: #ffffff;
+      --primary: #087f8c;
+      --primary-dark: #075966;
+      --secondary: #15a6a0;
+      --text: #18343b;
+      --muted: #72858a;
+      --border: #dce7e9;
+      --soft: #e7f5f4;
+      --danger: #d94848;
+      --warning: #d89b2b;
+      --shadow: 0 5px 22px rgba(20, 65, 75, 0.06);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      font-size: 14px;
+    }
+
+    button, select { font: inherit; }
+
+    .layout {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 245px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      background: #fff;
+      border-right: 1px solid var(--border);
+      padding: 24px 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 10px;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: var(--primary);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: -0.5px;
+    }
+
+    .brand p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .nav-label {
+      padding: 0 12px;
+      margin-bottom: 8px;
+      color: #94a4a8;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.3px;
+      text-transform: uppercase;
+    }
+
+    .nav {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .nav button {
+      border: 0;
+      background: transparent;
+      color: #5c747a;
+      text-align: left;
+      padding: 13px 12px;
+      border-radius: 9px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: .15s;
+    }
+
+    .nav button:hover { background: #f0f7f7; }
+
+    .nav button.active {
+      background: var(--soft);
+      color: var(--primary-dark);
+      font-weight: 700;
+    }
+
+    .nav-number {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      background: #f0f4f5;
+      font-size: 11px;
+    }
+
+    .nav button.active .nav-number {
+      background: var(--primary);
+      color: white;
+    }
+
+    .sidebar-bottom {
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+      padding: 18px 10px 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.7;
+    }
+
+    .main { min-width: 0; }
+
+    .topbar {
+      height: 76px;
+      background: rgba(255,255,255,.95);
+      border-bottom: 1px solid var(--border);
+      padding: 0 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .topbar h2 {
+      margin: 0;
+      font-size: 19px;
+      letter-spacing: -.4px;
+    }
+
+    .topbar p {
+      margin: 5px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .status {
+      border: 1px solid #cce9e4;
+      background: #eef9f6;
+      color: #247c69;
+      padding: 8px 12px;
+      border-radius: 20px;
+      white-space: nowrap;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .content { padding: 26px 30px 35px; }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .page-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .page-heading h3 {
+      margin: 0;
+      font-size: 23px;
+      letter-spacing: -.7px;
+    }
+
+    .page-heading p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 720px;
+    }
+
+    .button {
+      background: var(--primary);
+      color: white;
+      border: 0;
+      padding: 10px 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 650;
+    }
+
+    .button:hover { background: var(--primary-dark); }
+
+    .button.secondary {
+      background: white;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .metrics {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      margin-bottom: 20px;
+    }
+
+    .two-col {
+      grid-template-columns: minmax(0, 1.55fr) minmax(280px, 1fr);
+      margin-bottom: 20px;
+    }
+
+    .three-col {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-bottom: 20px;
+    }
+
+    .card {
+      min-width: 0;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .metric-value {
+      margin: 13px 0 7px;
+      font-size: 29px;
+      font-weight: 750;
+      letter-spacing: -1px;
+    }
+
+    .metric-foot {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .card-title h4 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 750;
+    }
+
+    .card-title span {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 285px;
+      width: 100%;
+    }
+
+    .chart-wrap.small { height: 225px; }
+
+    #map, #floodMap {
+      height: 420px;
+      width: 100%;
+      border-radius: 9px;
+      background: #e5edef;
+      z-index: 1;
+    }
+
+    #floodMap { height: 570px; }
+
+    .map-card { padding: 12px; }
+
+    .map-caption {
+      padding: 11px 8px 2px;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .notice {
+      border: 1px solid #cde6e6;
+      background: #f0f9f9;
+      color: #356970;
+      border-radius: 10px;
+      padding: 15px 17px;
+      line-height: 1.6;
+      margin-bottom: 18px;
+    }
+
+    .notice.warning {
+      border-color: #f0dfb7;
+      background: #fff9eb;
+      color: #80631f;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .field label {
+      font-size: 12px;
+      color: #5e7479;
+      font-weight: 700;
+    }
+
+    select {
+      width: 100%;
+      min-height: 40px;
+      background: white;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 11px;
+      outline-color: var(--primary);
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 12px;
+    }
+
+    th, td {
+      padding: 13px 12px;
+      text-align: left;
+      border-bottom: 1px solid #e8eeee;
+    }
+
+    th {
+      color: var(--muted);
+      background: #f8fbfb;
+      font-weight: 700;
+    }
+
+    td { color: #35535a; }
+
+    .pill {
+      display: inline-block;
+      border-radius: 15px;
+      padding: 5px 9px;
+      font-size: 10px;
+      font-weight: 750;
+      background: #edf4f4;
+      color: #587177;
+    }
+
+    .pill.red { background: #fdecec; color: #b63d3d; }
+    .pill.yellow { background: #fff5db; color: #926a13; }
+    .pill.green { background: #e5f5eb; color: #28774b; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 13px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .legend-color {
+      height: 10px;
+      width: 10px;
+      border-radius: 3px;
+      background: #159c8d;
+    }
+
+    .legend-color.red { background: #dc5656; }
+    .legend-color.yellow { background: #e7b440; }
+
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 18px 30px;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .empty-state {
+      color: var(--muted);
+      background: #f8fbfb;
+      border: 1px dashed #cfdddf;
+      border-radius: 9px;
+      padding: 20px;
+      line-height: 1.7;
+      font-size: 12px;
+    }
+
+    .full-width { grid-column: 1 / -1; }
+
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 205px minmax(0, 1fr); }
+      .content { padding: 22px 20px; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .two-col { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 700px) {
+      .layout { display: block; }
+      .sidebar { padding: 14px; gap: 14px; }
+      .sidebar-bottom { display: none; }
+      .nav {
+        flex-direction: row;
+        overflow-x: auto;
+        padding-bottom: 4px;
+      }
+      .nav-label { display: none; }
+      .nav button { flex-shrink: 0; padding: 9px; font-size: 12px; }
+      .nav-number { display: none; }
+      .topbar { height: auto; padding: 17px; }
+      .topbar h2 { font-size: 16px; }
+      .status { font-size: 10px; }
+      .content { padding: 18px 13px; }
+      .metrics { gap: 10px; }
+      .metric-value { font-size: 24px; }
+      .card { padding: 15px; }
+      .three-col, .filters { grid-template-columns: 1fr; }
+      #map { height: 340px; }
+      #floodMap { height: 430px; }
+      .page-heading h3 { font-size: 20px; }
+      .footer { padding: 15px; }
+    }
+  </style>
 </head>
+
 <body>
-<header>
-  <div>
-    <div class="eyebrow">SISTEMA DE MONITOREO HIDROLÓGICO · TUMBES, PERÚ</div>
-    <h1>Pronóstico de inundaciones de Tumbes</h1>
-    <p>Precipitación · Caudales · Áreas inundables · Impactos</p>
-  </div>
-  <div class="header-meta"><span>VERSIÓN DE DISEÑO</span><strong>B · Geoespacial moderno</strong></div>
-</header>
-<nav>
-  <button class="active" data-page="inicio">Inicio</button>
-  <button data-page="precipitacion">Pronóstico de precipitación</button>
-  <button data-page="caudal">Pronóstico de caudal · El Tigre</button>
-  <button data-page="inundacion">Áreas de inundación</button>
-  <button data-page="impactos">Pronóstico de impactos</button>
-</nav>
-<main>
-<section id="inicio" class="page active">
-  <div class="page-title"><div><div class="eyebrow">PANEL GENERAL</div><h2>Estado hidrológico de la cuenca</h2><p>Resumen del sistema de pronóstico y de los escenarios disponibles.</p></div><span class="pill">Datos reales: pendientes de conectar</span></div>
-  <div class="metrics">
-    <article class="metric"><span>Pronóstico meteorológico</span><strong>GFS / ECMWF</strong><small>Archivos locales por conectar</small></article>
-    <article class="metric"><span>Caudal de El Tigre</span><strong>— m³/s</strong><small>Último dato disponible</small></article>
-    <article class="metric"><span>Última actualización</span><strong>—</strong><small>Fecha de corrida pendiente</small></article>
-    <article class="metric"><span>Escenarios hidráulicos</span><strong>—</strong><small>GeoJSON por publicar</small></article>
-  </div>
-  <div class="columns">
-    <article class="panel"><h3>Área de estudio</h3><div id="map-home" class="map"></div><p class="note">Mapa base de referencia centrado en la ciudad de Tumbes.</p></article>
-    <article class="panel"><h3>Componentes del sistema</h3><div class="list-row"><span>01</span><div><b>Pronóstico de precipitación</b><small>Comparación de GFS y ECMWF</small></div></div><div class="list-row"><span>02</span><div><b>Pronóstico de caudal</b><small>Hidrograma observado y previsto de El Tigre</small></div></div><div class="list-row"><span>03</span><div><b>Áreas de inundación</b><small>Consulta de manchas por caudal simulado</small></div></div><div class="list-row"><span>04</span><div><b>Pronóstico de impactos</b><small>Edificaciones, población, cultivos y vías expuestas</small></div></div><div class="notice">Esta es una maqueta visual. Los valores no se inventan: los indicadores se completarán al conectar los archivos procesados.</div></article>
-  </div>
-</section>
-<section id="precipitacion" class="page">
-  <div class="page-title"><div><div class="eyebrow">MODELOS METEOROLÓGICOS</div><h2>Pronóstico de precipitación</h2><p>Comparación temporal y espacial de lluvia prevista.</p></div><span class="pill">Pendiente de datos</span></div>
-  <div class="metrics"><article class="metric"><span>Modelo</span><strong>GFS</strong><small>Pronóstico por conectar</small></article><article class="metric"><span>Modelo</span><strong>ECMWF</strong><small>Pronóstico por conectar</small></article><article class="metric"><span>Acumulado máximo</span><strong>— mm</strong><small>Se calculará con los datos</small></article><article class="metric"><span>Inicialización</span><strong>—</strong><small>Fecha de corrida</small></article></div>
-  <div class="columns"><article class="panel"><h3>Precipitación prevista</h3><div class="chart"><canvas id="rainChart"></canvas></div></article><article class="panel"><h3>Distribución espacial</h3><div id="rain-map" class="map"></div><p class="note">Aquí se cargará la capa raster o GeoJSON de precipitación.</p></article></div>
-</section>
-<section id="caudal" class="page">
-  <div class="page-title"><div><div class="eyebrow">PRONÓSTICO HIDROLÓGICO</div><h2>Caudal del río Tumbes · El Tigre</h2><p>Hidrograma observado y pronosticado con horizonte de hasta 72 horas.</p></div><span class="pill">Intervalo previsto: 3 horas</span></div>
-  <div class="metrics"><article class="metric"><span>Estación</span><strong>El Tigre</strong><small>Río Tumbes</small></article><article class="metric"><span>Caudal observado</span><strong>— m³/s</strong><small>Último registro</small></article><article class="metric"><span>Máximo pronosticado</span><strong>— m³/s</strong><small>Horizonte seleccionado</small></article><article class="metric"><span>Horizonte</span><strong>72 horas</strong><small>Según corrida disponible</small></article></div>
-  <article class="panel"><h3>Hidrograma de caudal</h3><div class="chart large"><canvas id="flowChart"></canvas></div><p class="note">Las series observada y pronosticada se cargarán desde tus archivos.</p></article>
-</section>
-<section id="inundacion" class="page">
-  <div class="page-title"><div><div class="eyebrow">MODELAMIENTO HIDRÁULICO</div><h2>Áreas de inundación</h2><p>Consulta de escenarios hidráulicos para distintos caudales.</p></div><span class="pill">Escenarios por conectar</span></div>
-  <div class="flood-layout"><article class="panel"><div class="toolbar"><label for="q">Caudal del escenario</label><select id="q"><option>50</option><option>100</option><option>150</option><option>300</option></select><span>m³/s</span></div><div id="flood-map" class="map tall"></div><p id="flood-status" class="note">Selecciona un caudal. La mancha se mostrará cuando su GeoJSON esté publicado.</p></article><article class="panel"><h3>Resumen del escenario</h3><div class="summary-line"><span>Caudal seleccionado</span><b id="q-label">50 m³/s</b></div><div class="summary-line"><span>Área inundada</span><b>— ha</b></div><div class="summary-line"><span>Edificaciones expuestas</span><b>—</b></div><div class="summary-line"><span>Población expuesta</span><b>—</b></div><div class="notice">Los indicadores se calcularán con la mancha hidráulica y las capas de exposición. No representan resultados reales hasta cargar los datos.</div></article></div>
-</section>
-<section id="impactos" class="page">
-  <div class="page-title"><div><div class="eyebrow">ANÁLISIS DE EXPOSICIÓN</div><h2>Pronóstico de impactos</h2><p>Indicadores vinculados al escenario hidráulico seleccionado.</p></div><span class="pill">Pendiente de procesamiento</span></div>
-  <article class="panel toolbar"><label for="qi">Escenario de caudal</label><select id="qi"><option>50</option><option>100</option><option>150</option><option>300</option></select><span>m³/s</span></article>
-  <div class="metrics impact-metrics"><article class="metric"><span>Área inundada</span><strong>— ha</strong><small>Según simulación hidráulica</small></article><article class="metric"><span>Edificaciones expuestas</span><strong>—</strong><small>Huella de edificios</small></article><article class="metric"><span>Población expuesta</span><strong>—</strong><small>Estimación espacial</small></article><article class="metric"><span>Infraestructura expuesta</span><strong>—</strong><small>Vías y servicios</small></article></div>
-  <article class="panel"><h3>Comparación de escenarios</h3><div class="table-wrap"><table><thead><tr><th>Caudal (m³/s)</th><th>Área inundada</th><th>Edificaciones</th><th>Población</th><th>Estado</th></tr></thead><tbody><tr><td>50</td><td>—</td><td>—</td><td>—</td><td>Pendiente</td></tr><tr><td>100</td><td>—</td><td>—</td><td>—</td><td>Pendiente</td></tr><tr><td>150</td><td>—</td><td>—</td><td>—</td><td>Pendiente</td></tr><tr><td>300</td><td>—</td><td>—</td><td>—</td><td>Pendiente</td></tr></tbody></table></div></article>
-</section>
-</main>
-<footer>Sistema de investigación hidrológica de Tumbes · Maqueta de interfaz · No sustituye las alertas oficiales.</footer>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">H</div>
+      <div>
+        <h1>HidroTumbes</h1>
+        <p>Monitoreo y pronóstico hidrológico</p>
+      </div>
+    </div>
+
+    <div>
+      <div class="nav-label">Plataforma</div>
+      <nav class="nav">
+        <button class="active" data-page="inicio">
+          <span class="nav-number">01</span> Inicio
+        </button>
+        <button data-page="precipitacion">
+          <span class="nav-number">02</span> Precipitación
+        </button>
+        <button data-page="caudal">
+          <span class="nav-number">03</span> Pronóstico de caudal
+        </button>
+        <button data-page="inundacion">
+          <span class="nav-number">04</span> Áreas de inundación
+        </button>
+        <button data-page="impactos">
+          <span class="nav-number">05</span> Impactos
+        </button>
+      </nav>
+    </div>
+
+    <div class="sidebar-bottom">
+      Sistema de información hidrometeorológica<br>
+      Cuenca del río Tumbes, Perú<br><br>
+      Los resultados se mostrarán cuando se conecten los archivos de datos.
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h2 id="topTitle">Centro de monitoreo hidrológico</h2>
+        <p id="topSubtitle">Cuenca del río Tumbes · Estación El Tigre</p>
+      </div>
+      <div class="status" id="connectionStatus">Esperando datos</div>
+    </header>
+
+    <div class="content">
+
+      <!-- 1. INICIO -->
+      <section class="page active" id="page-inicio">
+        <div class="page-heading">
+          <div>
+            <h3>Resumen hidrometeorológico</h3>
+            <p>
+              Consulta la información disponible para el monitoreo de lluvias,
+              caudales, zonas inundables e impactos potenciales en la cuenca del río Tumbes.
+            </p>
+          </div>
+          <button class="button secondary" onclick="actualizarDatos()">Actualizar datos</button>
+        </div>
+
+        <div class="notice">
+          <strong>Estado de la plataforma.</strong>
+          <span id="homeMessage">
+            La interfaz está preparada. Las observaciones y los pronósticos reales
+            aparecerán cuando se publiquen los archivos de datos.
+          </span>
+        </div>
+
+        <div class="grid metrics">
+          <div class="card">
+            <div class="metric-label">Precipitación pronosticada</div>
+            <div class="metric-value" id="homeRain">—</div>
+            <div class="metric-foot">Acumulado del periodo disponible</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">Caudal pronosticado</div>
+            <div class="metric-value" id="homeFlow">—</div>
+            <div class="metric-foot">m³/s · Estación El Tigre</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">Área inundada</div>
+            <div class="metric-value" id="homeArea">—</div>
+            <div class="metric-foot">Superficie calculada con el escenario hidráulico</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">Población expuesta</div>
+            <div class="metric-value" id="homePopulation">—</div>
+            <div class="metric-foot">Personas estimadas dentro de la mancha</div>
+          </div>
+        </div>
+
+        <div class="grid two-col">
+          <div class="card map-card">
+            <div class="card-title">
+              <h4>Mapa de referencia de la zona de estudio</h4>
+              <span>Tumbes</span>
+            </div>
+            <div id="map"></div>
+            <div class="map-caption">
+              <span>Mapa base interactivo</span>
+              <span>Selecciona el zoom para explorar el área</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <h4>Hidrograma de referencia</h4>
+              <span>El Tigre</span>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="homeChart"></canvas>
+            </div>
+            <div class="empty-state" id="homeChartMessage">
+              Sin datos de caudal cargados. El gráfico se completará al conectar
+              el archivo de observaciones y pronóstico.
+            </div>
+          </div>
+        </div>
+
+        <div class="grid two-col">
+          <div class="card">
+            <div class="card-title">
+              <h4>Productos del sistema</h4>
+              <span>Disponibilidad</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Producto</th><th>Fuente</th><th>Estado</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Pronóstico de precipitación</td><td>GFS / ECMWF</td><td><span class="pill">Pendiente de conexión</span></td></tr>
+                  <tr><td>Pronóstico de caudal</td><td>Modelo hidrológico</td><td><span class="pill">Pendiente de conexión</span></td></tr>
+                  <tr><td>Manchas de inundación</td><td>Modelo hidráulico</td><td><span class="pill">Pendiente de archivos</span></td></tr>
+                  <tr><td>Impactos potenciales</td><td>Análisis geoespacial</td><td><span class="pill">Pendiente de archivos</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><h4>Última actualización</h4></div>
+            <div class="metric-value" style="font-size:20px" id="lastUpdated">—</div>
+            <p class="metric-foot">
+              La fecha se obtendrá de los archivos publicados. No representa
+              necesariamente la hora de emisión del modelo meteorológico.
+            </p>
+            <div class="notice" style="margin-top:20px;margin-bottom:0">
+              <strong>Importante:</strong> un pronóstico es una estimación.
+              La interpretación debe considerar la incertidumbre y la información
+              oficial de las autoridades competentes.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. PRECIPITACIÓN -->
+      <section class="page" id="page-precipitacion">
+        <div class="page-heading">
+          <div>
+            <h3>Pronóstico de precipitación</h3>
+            <p>
+              Visualización de pronósticos meteorológicos y acumulados de lluvia
+              para la cuenca. Los mapas raster se podrán incorporar cuando se
+              publiquen los productos procesados.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid metrics">
+          <div class="card">
+            <div class="metric-label">Fuente seleccionada</div>
+            <div class="metric-value" id="rainSourceLabel" style="font-size:24px">GFS</div>
+            <div class="metric-foot">Modelo meteorológico</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">Acumulado de lluvia</div>
+            <div class="metric-value" id="rainTotal">—</div>
+            <div class="metric-foot">mm · Periodo seleccionado</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">Máximo previsto</div>
+            <div class="metric-value" id="rainMaximum">—</div>
+            <div class="metric-foot">mm · Según archivo disponible</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">Actualización del producto</div>
+            <div class="metric-value" id="rainUpdated" style="font-size:18px">—</div>
+            <div class="metric-foot">Fecha indicada en el archivo</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <div class="filters">
+            <div class="field">
+              <label for="rainSource">Modelo meteorológico</label>
+              <select id="rainSource">
+                <option value="GFS">GFS</option>
+                <option value="ECMWF">ECMWF</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="rainPeriod">Periodo de acumulación</label>
+              <select id="rainPeriod">
+                <option value="24">24 horas</option>
+                <option value="48">48 horas</option>
+                <option value="72" selected>72 horas</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="rainVariable">Variable</label>
+              <select id="rainVariable">
+                <option value="accumulated">Precipitación acumulada</option>
+                <option value="hourly">Precipitación por intervalo</option>
+              </select>
+            </div>
+          </div>
+          <div class="notice" style="margin-bottom:0">
+            La interfaz requiere archivos de pronóstico procesados y georreferenciados.
+            No se genera un mapa de lluvia real hasta cargar esos productos.
+          </div>
+        </div>
+
+        <div class="grid two-col">
+          <div class="card">
+            <div class="card-title">
+              <h4>Mapa de precipitación</h4>
+              <span id="rainMapCaption">GFS · 72 horas</span>
+            </div>
+            <div id="rainMap" style="height:420px;border-radius:9px;background:#e5edef"></div>
+            <div class="legend">
+              <span>El mapa de lluvia se mostrará cuando se conecte el raster publicado.</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <h4>Evolución de la precipitación</h4>
+              <span>Serie temporal</span>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="rainChart"></canvas>
+            </div>
+            <div class="empty-state" id="rainChartMessage">
+              No hay una serie temporal cargada.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. CAUDAL -->
+      <section class="page" id="page-caudal">
+        <div class="page-heading">
+          <div>
+            <h3>Pronóstico de caudal del río Tumbes</h3>
+            <p>
+              Seguimiento del caudal observado y previsto en la estación El Tigre.
+              La interfaz admite series horarias o intervalos de tres horas y
+              horizontes de pronóstico de hasta 72 horas.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid metrics">
+          <div class="card">
+            <div class="metric-label">Último caudal observado</div>
+            <div class="metric-value" id="observedFlow">—</div>
+            <div class="metric-foot">m³/s</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">Caudal máximo pronosticado</div>
+            <div class="metric-value" id="maximumFlow">—</div>
+            <div class="metric-foot">m³/s · Horizonte disponible</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">Hora del máximo</div>
+            <div class="metric-value" id="maximumTime" style="font-size:18px">—</div>
+            <div class="metric-foot">Según el pronóstico publicado</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">Horizonte</div>
+            <div class="metric-value" id="flowHorizon">—</div>
+            <div class="metric-foot">Horas de pronóstico disponibles</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <div class="filters">
+            <div class="field">
+              <label for="flowStation">Estación hidrológica</label>
+              <select id="flowStation">
+                <option value="El Tigre">El Tigre</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="flowHorizonSelect">Horizonte del pronóstico</label>
+              <select id="flowHorizonSelect">
+                <option value="24">24 horas</option>
+                <option value="48">48 horas</option>
+                <option value="72" selected>72 horas</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="flowInterval">Intervalo mostrado</label>
+              <select id="flowInterval">
+                <option value="1">1 hora</option>
+                <option value="3" selected>3 horas</option>
+                <option value="6">6 horas</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-title">
+            <h4>Hidrograma observado y pronosticado</h4>
+            <span>Caudal (m³/s)</span>
+          </div>
+          <div class="chart-wrap" style="height:390px">
+            <canvas id="flowChart"></canvas>
+          </div>
+          <div class="legend">
+            <div class="legend-item"><span class="legend-color"></span>Caudal observado</div>
+            <div class="legend-item"><span class="legend-color red"></span>Caudal pronosticado</div>
+          </div>
+          <div class="empty-state" id="flowChartMessage" style="margin-top:14px">
+            Carga un archivo de pronóstico para visualizar el hidrograma.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><h4>Valores del pronóstico</h4></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha y hora</th>
+                  <th>Caudal pronosticado (m³/s)</th>
+                  <th>Horizonte (h)</th>
+                </tr>
+              </thead>
+              <tbody id="flowTable">
+                <tr><td colspan="3">No hay datos de pronóstico disponibles.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. INUNDACIÓN -->
+      <section class="page" id="page-inundacion">
+        <div class="page-heading">
+          <div>
+            <h3>Áreas potencialmente inundables</h3>
+            <p>
+              Consulta las manchas de inundación generadas mediante el modelo
+              hidráulico para distintos escenarios de caudal.
+            </p>
+          </div>
+        </div>
+
+        <div class="notice warning">
+          Las manchas deben provenir de una simulación hidráulica y estar
+          correctamente georreferenciadas. El escenario seleccionado no implica
+          que ese caudal esté ocurriendo actualmente.
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <div class="filters">
+            <div class="field">
+              <label for="scenarioSelect">Escenario de caudal</label>
+              <select id="scenarioSelect">
+                <option value="Q050">50 m³/s</option>
+                <option value="Q100">100 m³/s</option>
+                <option value="Q150">150 m³/s</option>
+                <option value="Q300">300 m³/s</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="scenarioDescription">Interpretación</label>
+              <select id="scenarioDescription">
+                <option value="model">Escenario hidráulico simulado</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Archivo del escenario</label>
+              <div id="scenarioFile" style="padding:12px;background:#f5f9f9;border:1px solid var(--border);border-radius:8px">
+                manchas/Q050.geojson
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid two-col">
+          <div class="card map-card">
+            <div class="card-title">
+              <h4>Mapa de extensión de inundación</h4>
+              <span id="floodScenarioLabel">Escenario 50 m³/s</span>
+            </div>
+            <div id="floodMap"></div>
+            <div class="map-caption">
+              <span>Activa las capas desde el control del mapa.</span>
+              <span>La extensión depende del GeoJSON publicado.</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><h4>Indicadores del escenario</h4></div>
+            <div class="metric-label">Área inundada estimada</div>
+            <div class="metric-value" id="floodArea">—</div>
+            <div class="metric-foot">km² · Debe calcularse a partir de la geometría</div>
+            <hr style="border:0;border-top:1px solid var(--border);margin:20px 0">
+            <div class="metric-label">Edificaciones expuestas</div>
+            <div class="metric-value" id="floodBuildings">—</div>
+            <div class="metric-foot">Unidades intersectadas con la mancha</div>
+            <hr style="border:0;border-top:1px solid var(--border);margin:20px 0">
+            <div class="metric-label">Vías potencialmente afectadas</div>
+            <div class="metric-value" id="floodRoads">—</div>
+            <div class="metric-foot">Kilómetros dentro de la zona inundada</div>
+            <div class="empty-state" id="floodMessage" style="margin-top:18px">
+              Esperando el archivo GeoJSON del escenario seleccionado.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. IMPACTOS -->
+      <section class="page" id="page-impactos">
+        <div class="page-heading">
+          <div>
+            <h3>Pronóstico de impactos</h3>
+            <p>
+              Evaluación de elementos expuestos a las áreas inundables:
+              población, edificaciones, agricultura, vías e infraestructura.
+            </p>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <div class="filters">
+            <div class="field">
+              <label for="impactScenario">Escenario de análisis</label>
+              <select id="impactScenario">
+                <option value="Q050">50 m³/s</option>
+                <option value="Q100">100 m³/s</option>
+                <option value="Q150">150 m³/s</option>
+                <option value="Q300">300 m³/s</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="impactType">Elemento expuesto</label>
+              <select id="impactType">
+                <option value="all">Todos los elementos</option>
+                <option value="population">Población</option>
+                <option value="buildings">Edificaciones</option>
+                <option value="crops">Cultivos</option>
+                <option value="roads">Vías</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="impactData">Fuente del análisis</label>
+              <select id="impactData">
+                <option value="published">Resultados publicados</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid metrics">
+          <div class="card">
+            <div class="metric-label">Población expuesta</div>
+            <div class="metric-value" id="impactPopulation">—</div>
+            <div class="metric-foot">Personas estimadas</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">Edificaciones expuestas</div>
+            <div class="metric-value" id="impactBuildings">—</div>
+            <div class="metric-foot">Edificaciones intersectadas</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">Área agrícola afectada</div>
+            <div class="metric-value" id="impactCrops">—</div>
+            <div class="metric-foot">Hectáreas estimadas</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">Vías afectadas</div>
+            <div class="metric-value" id="impactRoads">—</div>
+            <div class="metric-foot">Kilómetros estimados</div>
+          </div>
+        </div>
+
+        <div class="grid two-col">
+          <div class="card">
+            <div class="card-title"><h4>Distribución de impactos</h4></div>
+            <div class="chart-wrap">
+              <canvas id="impactChart"></canvas>
+            </div>
+            <div class="empty-state" id="impactChartMessage">
+              El gráfico se completará cuando se conecten los resultados de exposición.
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title"><h4>Resumen de exposición</h4></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Elemento</th><th>Indicador</th><th>Resultado</th></tr></thead>
+                <tbody id="impactTable">
+                  <tr><td>Población</td><td>Personas</td><td>—</td></tr>
+                  <tr><td>Edificaciones</td><td>Unidades</td><td>—</td></tr>
+                  <tr><td>Cultivos</td><td>Hectáreas</td><td>—</td></tr>
+                  <tr><td>Vías</td><td>Kilómetros</td><td>—</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="notice" style="margin-top:18px;margin-bottom:0">
+              Los impactos son estimaciones espaciales. No equivalen a daños
+              confirmados ni a un registro de personas efectivamente afectadas.
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="footer">
+      <span>HidroTumbes · Plataforma de información hidrológica</span>
+      <span>Datos sujetos a disponibilidad, validación y fecha de emisión.</span>
+    </footer>
+  </main>
+</div>
+
 <script>
-document.querySelectorAll('nav button').forEach(btn=>btn.addEventListener('click',()=>{
- document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b===btn));
- document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===btn.dataset.page));
- setTimeout(()=>Object.values(maps).forEach(m=>m.invalidateSize()),100);
-}));
-const maps={};
-function addMap(id){
- const m=L.map(id).setView([-3.5669,-80.4515],11);
- L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles © Esri',maxZoom:19}).addTo(m);
- return m;
-}
-['map-home','rain-map','flood-map'].forEach(id=>maps[id]=addMap(id));
-document.getElementById('q').addEventListener('change',e=>{
- document.getElementById('q-label').textContent=e.target.value+' m³/s';
- document.getElementById('qi').value=e.target.value;
- const q=e.target.value;
- document.getElementById('flood-status').textContent='Buscando manchas/Q'+q.padStart(3,'0')+'.geojson …';
- fetch('manchas/Q'+q.padStart(3,'0')+'.geojson?v='+Date.now()).then(r=>{if(!r.ok)throw Error();return r.json()}).then(g=>{
-  if(window.floodLayer)maps['flood-map'].removeLayer(window.floodLayer);
-  window.floodLayer=L.geoJSON(g,{style:{color:'#087e83',weight:1,fillColor:'#087e83',fillOpacity:.4}}).addTo(maps['flood-map']);
-  maps['flood-map'].fitBounds(window.floodLayer.getBounds());
-  document.getElementById('flood-status').textContent='Mancha cargada para '+q+' m³/s.';
- }).catch(()=>document.getElementById('flood-status').textContent='No hay GeoJSON publicado para '+q+' m³/s. Esta maqueta está lista para conectarlo.');
-});
-document.getElementById('qi').addEventListener('change',e=>{document.getElementById('q').value=e.target.value;document.getElementById('q').dispatchEvent(new Event('change'))});
-function chart(id){
- return new Chart(document.getElementById(id),{type:'line',data:{labels:[],datasets:[{label:'GFS / observado',data:[],borderColor:'#087e83',tension:.25},{label:'ECMWF / pronosticado',data:[],borderColor:'#70a83b',tension:.25}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}});
-}
-chart('rainChart');chart('flowChart');
+  // ==========================================================
+  // CONFIGURACIÓN GENERAL
+  // El sitio funciona como una aplicación estática en GitHub Pages.
+  // Las rutas de datos pueden modificarse cuando se publiquen.
+  // ==========================================================
+
+  const CONFIG = {
+    files: {
+      gfs: "data/pronostico_gfs.json",
+      ecmwf: "data/pronostico_ecmwf.json",
+      flow: "data/pronostico_caudal.json",
+      impacts: "impactos/impactos.json"
+    },
+    scenarios: {
+      Q050: { flow: 50, file: "manchas/Q050.geojson" },
+      Q100: { flow: 100, file: "manchas/Q100.geojson" },
+      Q150: { flow: 150, file: "manchas/Q150.geojson" },
+      Q300: { flow: 300, file: "manchas/Q300.geojson" }
+    },
+    center: [-3.5669, -80.4515],
+    zoom: 10
+  };
+
+  const state = {
+    rain: null,
+    flow: null,
+    impacts: null,
+    rainMap: null,
+    homeMap: null,
+    floodMap: null,
+    floodLayer: null,
+    charts: {},
+    scenario: "Q050"
+  };
+
+  const pageTitles = {
+    inicio: ["Centro de monitoreo hidrológico", "Cuenca del río Tumbes · Estación El Tigre"],
+    precipitacion: ["Pronóstico meteorológico", "Precipitación prevista · GFS y ECMWF"],
+    caudal: ["Pronóstico hidrológico", "Caudal del río Tumbes · Estación El Tigre"],
+    inundacion: ["Análisis de inundación", "Escenarios hidráulicos y extensión potencial"],
+    impactos: ["Análisis de impactos", "Elementos expuestos a inundaciones"]
+  };
+
+  // ==========================================================
+  // NAVEGACIÓN
+  // ==========================================================
+
+  document.querySelectorAll(".nav button").forEach(button => {
+    button.addEventListener("click", () => {
+      const page = button.dataset.page;
+
+      document.querySelectorAll(".nav button").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+
+      button.classList.add("active");
+      document.getElementById("page-" + page).classList.add("active");
+
+      document.getElementById("topTitle").textContent = pageTitles[page][0];
+      document.getElementById("topSubtitle").textContent = pageTitles[page][1];
+
+      // Leaflet necesita recalcular el tamaño al mostrar un mapa oculto.
+      setTimeout(() => {
+        [state.homeMap, state.rainMap, state.floodMap].forEach(map => {
+          if (map) map.invalidateSize();
+        });
+      }, 100);
+    });
+  });
+
+  // ==========================================================
+  // MAPAS
+  // ==========================================================
+
+  function crearMapa(elementId, zoom = CONFIG.zoom) {
+    const map = L.map(elementId).setView(CONFIG.center, zoom);
+
+    const osm = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
+      }
+    );
+
+    const satellite = L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      {
+        maxZoom: 19,
+        attribution: "Tiles &copy; Esri"
+      }
+    );
+
+    osm.addTo(map);
+
+    L.control.layers({
+      "Mapa base": osm,
+      "Imagen satelital": satellite
+    }).addTo(map);
+
+    return map;
+  }
+
+  function inicializarMapas() {
+    state.homeMap = crearMapa("map", 10);
+    state.rainMap = crearMapa("rainMap", 9);
+    state.floodMap = crearMapa("floodMap", 13);
+
+    L.marker(CONFIG.center)
+      .addTo(state.homeMap)
+      .bindPopup("Zona de referencia: Tumbes");
+
+    L.marker(CONFIG.center)
+      .addTo(state.floodMap)
+      .bindPopup("Punto de referencia. Ajustar al área de simulación.");
+
+    L.marker(CONFIG.center)
+      .addTo(state.rainMap)
+      .bindPopup("Centro de referencia de la zona de estudio.");
+  }
+
+  // ==========================================================
+  // GRÁFICOS
+  // ==========================================================
+
+  function crearGrafico(id, type, labels, datasets, options = {}) {
+    const canvas = document.getElementById(id);
+    if (!canvas) return null;
+
+    if (state.charts[id]) {
+      state.charts[id].destroy();
+    }
+
+    state.charts[id] = new Chart(canvas, {
+      type,
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { intersect: false, mode: "index" },
+        plugins: {
+          legend: { display: datasets.length > 1 },
+          tooltip: { enabled: true }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { maxRotation: 0, maxTicksLimit: 8 }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: "#edf2f3" }
+          }
+        },
+        ...options
+      }
+    });
+
+    return state.charts[id];
+  }
+
+  function graficoVacio(id, label, axisLabel = "") {
+    return crearGrafico(id, "line", [], [{
+      label,
+      data: [],
+      borderColor: "#087f8c",
+      backgroundColor: "rgba(8,127,140,.10)",
+      fill: true,
+      tension: .3,
+      pointRadius: 0
+    }], {
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
+        title: { display: false }
+      },
+      scales: {
+        x: { grid: { display: false }, title: { display: false } },
+        y: {
+          beginAtZero: true,
+          title: { display: Boolean(axisLabel), text: axisLabel },
+          grid: { color: "#edf2f3" }
+        }
+      }
+    });
+  }
+
+  function inicializarGraficos() {
+    graficoVacio("homeChart", "Caudal", "m³/s");
+    graficoVacio("rainChart", "Precipitación", "mm");
+    graficoVacio("flowChart", "Caudal", "m³/s");
+
+    crearGrafico("impactChart", "bar", [], [{
+      label: "Impacto estimado",
+      data: [],
+      backgroundColor: "#159c8d",
+      borderRadius: 5
+    }], {
+      plugins: { legend: { display: false } }
+    });
+  }
+
+  // ==========================================================
+  // CARGA SEGURA DE ARCHIVOS JSON
+  // Si el archivo no existe, se conserva el estado sin datos.
+  // ==========================================================
+
+  async function cargarJSON(url) {
+    const response = await fetch(url + "?v=" + Date.now(), {
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      throw new Error("No se pudo cargar " + url + " (HTTP " + response.status + ")");
+    }
+
+    return await response.json();
+  }
+
+  function numeroValido(value) {
+    return typeof value === "number" && Number.isFinite(value);
+  }
+
+  function formatearNumero(value, digits = 1) {
+    if (!numeroValido(value)) return "—";
+    return value.toLocaleString("es-PE", {
+      maximumFractionDigits: digits
+    });
+  }
+
+  function mostrarFecha(value) {
+    if (!value) return "—";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+
+    return date.toLocaleString("es-PE", {
+      dateStyle: "short",
+      timeStyle: "short",
+      timeZone: "America/Lima"
+    });
+  }
+
+  function actualizarEstado(text, connected = false) {
+    const element = document.getElementById("connectionStatus");
+    element.textContent = text;
+    element.style.color = connected ? "#247c69" : "#80631f";
+    element.style.background = connected ? "#eef9f6" : "#fff9eb";
+    element.style.borderColor = connected ? "#cce9e4" : "#f0dfb7";
+  }
+
+  // ==========================================================
+  // PRECIPITACIÓN
+  //
+  // Formato JSON sugerido:
+  // {
+  //   "actualizado": "2026-10-12T12:00:00-05:00",
+  //   "unidad": "mm",
+  //   "pronostico": [
+  //     {"fecha":"2026-10-13T00:00:00-05:00","precipitacion_mm":2.5}
+  //   ]
+  // }
+  // ==========================================================
+
+  function obtenerSeriePrecipitacion(data) {
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.pronostico)) return data.pronostico;
+    if (data && Array.isArray(data.data)) return data.data;
+    return [];
+  }
+
+  function actualizarGraficoLluvia() {
+    const source = document.getElementById("rainSource").value;
+    const period = Number(document.getElementById("rainPeriod").value);
+    const variable = document.getElementById("rainVariable").value;
+    const data = state.rain?.[source.toLowerCase()];
+
+    document.getElementById("rainSourceLabel").textContent = source;
+    document.getElementById("rainMapCaption").textContent = source + " · " + period + " horas";
+
+    if (!data) {
+      document.getElementById("rainTotal").textContent = "—";
+      document.getElementById("rainMaximum").textContent = "—";
+      document.getElementById("rainUpdated").textContent = "—";
+      document.getElementById("rainChartMessage").style.display = "block";
+      document.getElementById("rainChartMessage").textContent =
+        "No hay datos publicados para " + source + ".";
+      graficoVacio("rainChart", "Precipitación", "mm");
+      return;
+    }
+
+    const series = obtenerSeriePrecipitacion(data);
+    const field = variable === "hourly"
+      ? "precipitacion_mm"
+      : "acumulado_mm";
+
+    const valid = series.filter(row =>
+      row && row.fecha && numeroValido(row[field])
+    );
+
+    const selected = valid.slice(0, period);
+
+    if (!selected.length) {
+      document.getElementById("rainTotal").textContent = "—";
+      document.getElementById("rainMaximum").textContent = "—";
+      document.getElementById("rainUpdated").textContent = mostrarFecha(data.actualizado);
+      document.getElementById("rainChartMessage").style.display = "block";
+      document.getElementById("rainChartMessage").textContent =
+        "El archivo existe, pero no contiene la variable esperada: " + field + ".";
+      graficoVacio("rainChart", "Precipitación", "mm");
+      return;
+    }
+
+    const values = selected.map(row => row[field]);
+    const sum = values.reduce((a, b) => a + b, 0);
+    const max = Math.max(...values);
+
+    document.getElementById("rainTotal").textContent = formatearNumero(sum) + " mm";
+    document.getElementById("rainMaximum").textContent = formatearNumero(max) + " mm";
+    document.getElementById("rainUpdated").textContent = mostrarFecha(data.actualizado);
+    document.getElementById("rainChartMessage").style.display = "none";
+
+    crearGrafico("rainChart", "line",
+      selected.map(row => mostrarFecha(row.fecha)),
+      [{
+        label: "Precipitación (mm)",
+        data: values,
+        borderColor: "#087f8c",
+        backgroundColor: "rgba(8,127,140,.13)",
+        fill: true,
+        tension: .25,
+        pointRadius: 2
+      }]
+    );
+  }
+
+  // ==========================================================
+  // CAUDALES
+  //
+  // Formato JSON sugerido:
+  // {
+  //   "actualizado": "...",
+  //   "estacion": "El Tigre",
+  //   "observado": [
+  //     {"fecha":"...","caudal_m3s":120}
+  //   ],
+  //   "pronostico": [
+  //     {"fecha":"...","caudal_m3s":135,"horizonte_h":3}
+  //   ]
+  // }
+  // ==========================================================
+
+  function obtenerSerieCaudal(data, key) {
+    if (data && Array.isArray(data[key])) return data[key];
+    return [];
+  }
+
+  function actualizarCaudal() {
+    const data = state.flow;
+
+    if (!data) {
+      ["observedFlow", "maximumFlow", "maximumTime", "flowHorizon", "homeFlow"]
+        .forEach(id => document.getElementById(id).textContent = "—");
+
+      document.getElementById("flowChartMessage").style.display = "block";
+      document.getElementById("flowTable").innerHTML =
+        '<tr><td colspan="3">No hay datos de pronóstico disponibles.</td></tr>';
+      document.getElementById("homeChartMessage").style.display = "block";
+
+      graficoVacio("flowChart", "Caudal", "m³/s");
+      graficoVacio("homeChart", "Caudal", "m³/s");
+      return;
+    }
+
+    const observed = obtenerSerieCaudal(data, "observado");
+    const forecast = obtenerSerieCaudal(data, "pronostico");
+
+    const horizon = Number(document.getElementById("flowHorizonSelect").value);
+    const interval = Number(document.getElementById("flowInterval").value);
+
+    const validObserved = observed.filter(row =>
+      row && row.fecha && numeroValido(row.caudal_m3s)
+    );
+
+    const validForecast = forecast.filter(row =>
+      row && row.fecha && numeroValido(row.caudal_m3s)
+    );
+
+    const selectedForecast = validForecast.filter((row, index) => {
+      const h = numeroValido(row.horizonte_h) ? row.horizonte_h : null;
+      if (h !== null) return h <= horizon && h % interval === 0;
+      return index % Math.max(1, Math.round(interval / 3)) === 0;
+    });
+
+    const lastObserved = validObserved.length
+      ? validObserved[validObserved.length - 1]
+      : null;
+
+    const maxRow = selectedForecast.length
+      ? selectedForecast.reduce((a, b) =>
+          a.caudal_m3s > b.caudal_m3s ? a : b
+        )
+      : null;
+
+    document.getElementById("observedFlow").textContent =
+      lastObserved ? formatearNumero(lastObserved.caudal_m3s) : "—";
+
+    document.getElementById("maximumFlow").textContent =
+      maxRow ? formatearNumero(maxRow.caudal_m3s) : "—";
+
+    document.getElementById("homeFlow").textContent =
+      maxRow ? formatearNumero(maxRow.caudal_m3s) : "—";
+
+    document.getElementById("maximumTime").textContent =
+      maxRow ? mostrarFecha(maxRow.fecha) : "—";
+
+    document.getElementById("flowHorizon").textContent =
+      selectedForecast.length
+        ? formatearNumero(Math.max(...selectedForecast.map(row =>
+            numeroValido(row.horizonte_h) ? row.horizonte_h : 0
+          )), 0) + " h"
+        : "—";
+
+    const labels = [
+      ...validObserved.map(row => row.fecha),
+      ...selectedForecast.map(row => row.fecha)
+    ].filter((value, index, array) => array.indexOf(value) === index).sort();
+
+    const obsMap = new Map(validObserved.map(row => [row.fecha, row.caudal_m3s]));
+    const forecastMap = new Map(selectedForecast.map(row => [row.fecha, row.caudal_m3s]));
+
+    crearGrafico("flowChart", "line", labels.map(mostrarFecha), [
+      {
+        label: "Observado",
+        data: labels.map(date => obsMap.has(date) ? obsMap.get(date) : null),
+        borderColor: "#159c8d",
+        backgroundColor: "rgba(21,156,141,.08)",
+        tension: .2,
+        pointRadius: 2,
+        spanGaps: false
+      },
+      {
+        label: "Pronosticado",
+        data: labels.map(date => forecastMap.has(date) ? forecastMap.get(date) : null),
+        borderColor: "#d94848",
+        backgroundColor: "rgba(217,72,72,.08)",
+        borderDash: [6, 4],
+        tension: .2,
+        pointRadius: 2,
+        spanGaps: false
+      }
+    ]);
+
+    document.getElementById("flowChartMessage").style.display =
+      (validObserved.length || selectedForecast.length) ? "none" : "block";
+
+    const homeForecast = selectedForecast.slice(0, 24);
+    const homeLabels = homeForecast.map(row => row.fecha);
+    crearGrafico("homeChart", "line", homeLabels.map(mostrarFecha), [{
+      label: "Caudal pronosticado",
+      data: homeForecast.map(row => row.caudal_m3s),
+      borderColor: "#087f8c",
+      backgroundColor: "rgba(8,127,140,.12)",
+      fill: true,
+      tension: .25,
+      pointRadius: 2
+    }], {
+      plugins: { legend: { display: false } }
+    });
+
+    document.getElementById("homeChartMessage").style.display =
+      homeForecast.length ? "none" : "block";
+
+    const table = selectedForecast.map(row => `
+      <tr>
+        <td>${mostrarFecha(row.fecha)}</td>
+        <td>${formatearNumero(row.caudal_m3s)}</td>
+        <td>${numeroValido(row.horizonte_h) ? row.horizonte_h : "—"}</td>
+      </tr>
+    `).join("");
+
+    document.getElementById("flowTable").innerHTML = table ||
+      '<tr><td colspan="3">No hay valores válidos para el horizonte seleccionado.</td></tr>';
+  }
+
+  // ==========================================================
+  // MANCHAS DE INUNDACIÓN
+  //
+  // Los GeoJSON deben estar en el sistema de coordenadas WGS84
+  // (longitud/latitud, EPSG:4326), tal como requiere Leaflet.
+  // ==========================================================
+
+  async function actualizarEscenario() {
+    const scenario = document.getElementById("scenarioSelect").value;
+    state.scenario = scenario;
+
+    document.getElementById("impactScenario").value = scenario;
+
+    const info = CONFIG.scenarios[scenario];
+    document.getElementById("scenarioFile").textContent = info.file;
+    document.getElementById("floodScenarioLabel").textContent =
+      "Escenario " + info.flow + " m³/s";
+
+    if (state.floodLayer) {
+      state.floodMap.removeLayer(state.floodLayer);
+      state.floodLayer = null;
+    }
+
+    document.getElementById("floodArea").textContent = "—";
+    document.getElementById("floodBuildings").textContent = "—";
+    document.getElementById("floodRoads").textContent = "—";
+    document.getElementById("floodMessage").style.display = "block";
+    document.getElementById("floodMessage").textContent =
+      "Cargando " + info.file + "...";
+
+    try {
+      const geojson = await cargarJSON(info.file);
+
+      state.floodLayer = L.geoJSON(geojson, {
+        style: {
+          color: "#087f8c",
+          weight: 2,
+          fillColor: "#15a6a0",
+          fillOpacity: 0.42
+        },
+        onEachFeature: (feature, layer) => {
+          const props = feature.properties || {};
+          const title = props.nombre || props.name || "Área de inundación";
+          layer.bindPopup(
+            "<strong>" + String(title) + "</strong><br>Escenario: " +
+            info.flow + " m³/s"
+          );
+        }
+      }).addTo(state.floodMap);
+
+      const bounds = state.floodLayer.getBounds();
+      if (bounds.isValid()) state.floodMap.fitBounds(bounds, { padding: [20, 20] });
+
+      document.getElementById("floodMessage").textContent =
+        "GeoJSON cargado. Los indicadores de impactos requieren un archivo de resultados asociado.";
+      document.getElementById("floodArea").textContent = "—";
+      document.getElementById("floodBuildings").textContent = "—";
+      document.getElementById("floodRoads").textContent = "—";
+    } catch (error) {
+      document.getElementById("floodMessage").textContent =
+        "No se pudo cargar el GeoJSON. Verifica que exista el archivo " +
+        info.file + " y que esté publicado en GitHub Pages.";
+    }
+
+    state.floodMap.invalidateSize();
+  }
+
+  // ==========================================================
+  // IMPACTOS
+  //
+  // Formato sugerido de impactos/impactos.json:
+  // {
+  //   "Q050": {
+  //     "poblacion": 120,
+  //     "edificaciones": 40,
+  //     "cultivos_ha": 12.5,
+  //     "vias_km": 3.2
+  //   }
+  // }
+  //
+  // Estos valores son solo un ejemplo de estructura, NO datos reales.
+  // ==========================================================
+
+  function actualizarImpactos() {
+    const scenario = document.getElementById("impactScenario").value;
+    const data = state.impacts?.[scenario];
+
+    document.getElementById("scenarioSelect").value = scenario;
+    state.scenario = scenario;
+
+    const population = data && numeroValido(data.poblacion) ? data.poblacion : null;
+    const buildings = data && numeroValido(data.edificaciones) ? data.edificaciones : null;
+    const crops = data && numeroValido(data.cultivos_ha) ? data.cultivos_ha : null;
+    const roads = data && numeroValido(data.vias_km) ? data.vias_km : null;
+
+    document.getElementById("impactPopulation").textContent =
+      population === null ? "—" : formatearNumero(population, 0);
+    document.getElementById("impactBuildings").textContent =
+      buildings === null ? "—" : formatearNumero(buildings, 0);
+    document.getElementById("impactCrops").textContent =
+      crops === null ? "—" : formatearNumero(crops);
+    document.getElementById("impactRoads").textContent =
+      roads === null ? "—" : formatearNumero(roads);
+
+    document.getElementById("homePopulation").textContent =
+      population === null ? "—" : formatearNumero(population, 0);
+
+    document.getElementById("homeArea").textContent =
+      data && numeroValido(data.area_km2)
+        ? formatearNumero(data.area_km2) + " km²"
+        : "—";
+
+    document.getElementById("impactTable").innerHTML = `
+      <tr><td>Población</td><td>Personas</td><td>${population === null ? "—" : formatearNumero(population, 0)}</td></tr>
+      <tr><td>Edificaciones</td><td>Unidades</td><td>${buildings === null ? "—" : formatearNumero(buildings, 0)}</td></tr>
+      <tr><td>Cultivos</td><td>Hectáreas</td><td>${crops === null ? "—" : formatearNumero(crops)}</td></tr>
+      <tr><td>Vías</td><td>Kilómetros</td><td>${roads === null ? "—" : formatearNumero(roads)}</td></tr>
+    `;
+
+    const available = [population, buildings, crops, roads].some(v => v !== null);
+
+    if (!available) {
+      document.getElementById("impactChartMessage").style.display = "block";
+      document.getElementById("impactChartMessage").textContent =
+        "No hay resultados de impactos para " + scenario + ".";
+      crearGrafico("impactChart", "bar", [], [{
+        label: "Impacto estimado",
+        data: [],
+        backgroundColor: "#159c8d",
+        borderRadius: 5
+      }], { plugins: { legend: { display: false } } });
+      return;
+    }
+
+    document.getElementById("impactChartMessage").style.display = "none";
+
+    const selectedType = document.getElementById("impactType").value;
+    const all = [
+      { key: "population", label: "Población", value: population },
+      { key: "buildings", label: "Edificaciones", value: buildings },
+      { key: "crops", label: "Cultivos (ha)", value: crops },
+      { key: "roads", label: "Vías (km)", value: roads }
+    ];
+
+    const filtered = selectedType === "all"
+      ? all
+      : all.filter(item => item.key === selectedType);
+
+    crearGrafico("impactChart", "bar",
+      filtered.map(item => item.label),
+      [{
+        label: "Valor estimado",
+        data: filtered.map(item => item.value),
+        backgroundColor: "#159c8d",
+        borderRadius: 5
+      }],
+      { plugins: { legend: { display: false } } }
+    );
+  }
+
+  // ==========================================================
+  // ACTUALIZACIÓN GENERAL
+  // ==========================================================
+
+  async function actualizarDatos() {
+    actualizarEstado("Actualizando...", false);
+
+    const results = await Promise.allSettled([
+      cargarJSON(CONFIG.files.gfs),
+      cargarJSON(CONFIG.files.ecmwf),
+      cargarJSON(CONFIG.files.flow),
+      cargarJSON(CONFIG.files.impacts)
+    ]);
+
+    const [gfsResult, ecmwfResult, flowResult, impactsResult] = results;
+
+    state.rain = {};
+
+    if (gfsResult.status === "fulfilled") {
+      state.rain.gfs = gfsResult.value;
+    }
+
+    if (ecmwfResult.status === "fulfilled") {
+      state.rain.ecmwf = ecmwfResult.value;
+    }
+
+    state.flow = flowResult.status === "fulfilled" ? flowResult.value : null;
+    state.impacts = impactsResult.status === "fulfilled" ? impactsResult.value : null;
+
+    actualizarGraficoLluvia();
+    actualizarCaudal();
+    actualizarImpactos();
+
+    const loadedCount = results.filter(r => r.status === "fulfilled").length;
+
+    if (loadedCount > 0) {
+      actualizarEstado(loadedCount + " archivo(s) cargado(s)", true);
+    } else {
+      actualizarEstado("Esperando archivos", false);
+    }
+
+    const timestamps = [
+      state.rain.gfs?.actualizado,
+      state.rain.ecmwf?.actualizado,
+      state.flow?.actualizado,
+      state.impacts?.actualizado
+    ].filter(Boolean).map(value => new Date(value))
+     .filter(date => !Number.isNaN(date.getTime()));
+
+    document.getElementById("lastUpdated").textContent = timestamps.length
+      ? mostrarFecha(new Date(Math.max(...timestamps.map(date => date.getTime()))).toISOString())
+      : "Sin actualización";
+
+    document.getElementById("homeMessage").textContent = loadedCount
+      ? "Se han cargado " + loadedCount +
+        " archivo(s). Revisa cada sección para comprobar qué productos contienen datos válidos."
+      : "No se encontraron los archivos de datos configurados. La interfaz funciona, pero los indicadores reales aún no están disponibles.";
+
+    // Refrescar el escenario al pulsar actualizar.
+    await actualizarEscenario();
+  }
+
+  // ==========================================================
+  // EVENTOS DE LOS CONTROLES
+  // ==========================================================
+
+  document.getElementById("rainSource").addEventListener("change", actualizarGraficoLluvia);
+  document.getElementById("rainPeriod").addEventListener("change", actualizarGraficoLluvia);
+  document.getElementById("rainVariable").addEventListener("change", actualizarGraficoLluvia);
+
+  document.getElementById("flowHorizonSelect").addEventListener("change", actualizarCaudal);
+  document.getElementById("flowInterval").addEventListener("change", actualizarCaudal);
+
+  document.getElementById("scenarioSelect").addEventListener("change", actualizarEscenario);
+  document.getElementById("impactScenario").addEventListener("change", async () => {
+    actualizarImpactos();
+    await actualizarEscenario();
+  });
+  document.getElementById("impactType").addEventListener("change", actualizarImpactos);
+
+  // ==========================================================
+  // INICIO DE LA APLICACIÓN
+  // ==========================================================
+
+  inicializarMapas();
+  inicializarGraficos();
+  actualizarDatos();
 </script>
 </body>
 </html>
-
-
-
-
-
