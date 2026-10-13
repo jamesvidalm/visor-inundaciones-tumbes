@@ -173,7 +173,6 @@ $('menuBtn').onclick=()=>$('nav').classList.toggle('open');
 function makeMap(id,zoom=10,locked=false){
  const map=L.map(id,{dragging:!locked,touchZoom:!locked,scrollWheelZoom:!locked,doubleClickZoom:!locked,boxZoom:!locked,keyboard:!locked,zoomControl:!locked,attributionControl:id!=='rainMap'}).setView(CENTER,zoom);
  if(id==='rainMap'){
-  // El mapa base se mantiene debajo del raster. Cambiar el fondo no elimina el pronóstico.
   const rasterPane=map.createPane('rainRasterPane');
   rasterPane.style.zIndex='350';
   rasterPane.style.pointerEvents='none';
@@ -215,24 +214,8 @@ function threshold(q){
 async function fetchJson(path){const clean=path.replace(/^\.\//,'');const url=new URL(clean,document.baseURI).href+'?v='+Date.now();const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error(`${clean} (HTTP ${r.status})`);return r.json()}
 async function tryJson(paths){for(const p of paths){try{return await fetchJson(p)}catch(e){}}return null}
 
-/*
-ARCHIVOS ESPERADOS PARA LA CONEXIÓN POSTERIOR:
-data/pronostico_gfs.json
-data/pronostico_ecmwf.json
-data/pronostico_caudal.json
-manchas/mean_00h.geojson ... manchas/mean_72h.geojson
-manchas/GFS_00h.geojson y manchas/ECMWF_00h.geojson (mismo patrón temporal)
-impactos/viviendas.geojson, poblacion.geojson, colegios.geojson,
-salud.geojson, puentes.geojson, vias.geojson, cultivos.geojson, critica.geojson
+let ecmwfCatalog=null, ecmwfRaster=null, ecmwfLayer=null, ecmwfLoadToken=0, ecmwfPaneName=null, cuencaLayer=null;
 
-Son nombres previstos, no archivos ni pronósticos que ya existan.
-*/
-
-let ecmwfCatalog=null, ecmwfRaster=null, ecmwfLayer=null, ecmwfLoadToken=0, ecmwfPaneName=null, rainBoundsLocked=false, cuencaLayer=null;
-// Escala fija en mm para comparar correctamente todos los horizontes.
-// Antes los colores se normalizaban al máximo de cada TIFF: por eso cada imagen
-// parecía igual aunque el valor de la leyenda cambiara.
-const RAIN_SCALE_MAX=50;
 function rainColor(v){
  if(!Number.isFinite(v)||v<0)return null;
  if(v===0)return 'rgba(255,255,255,0)';
@@ -258,12 +241,8 @@ async function loadCuenca(){
   const basinStyle={color:'#073b4c',weight:3,opacity:1,fillColor:'#22c7b8',fillOpacity:0.04,dashArray:'7 4'};
   cuencaLayer=L.geoJSON(data,{pane:'basinPane',style:basinStyle,interactive:false}).addTo(app.maps.rain);
   const basinBounds=cuencaLayer.getBounds();
-  if(!basinBounds || !basinBounds.isValid()) throw new Error('El GeoJSON no contiene geometrías con coordenadas válidas.');
-  // El encuadre se calcula exclusivamente con la cuenca, no con todo el Perú ni con el raster.
+  if(!basinBounds || !basinBounds.isValid()) throw new Error('El GeoJSON no contiene geometrías válidas.');
   app.maps.rain.fitBounds(basinBounds,{padding:[24,24],maxZoom:11,animate:false});
-  const basinZoom=app.maps.rain.getZoom();
-  // La cuenca define el encuadre inicial, pero el usuario puede acercarse y alejarse.
-  // Se permite zoom de 5 a 18; se limita el arrastre para no perder fácilmente la cuenca.
   app.maps.rain.setMinZoom(5);
   app.maps.rain.setMaxZoom(18);
   app.maps.rain.setMaxBounds(basinBounds.pad(0.6));
@@ -277,11 +256,10 @@ async function loadCuenca(){
   if(!app.maps.rain.zoomControl) L.control.zoom({position:'topleft'}).addTo(app.maps.rain);
   app.maps.rain.invalidateSize({pan:false});
   cuencaLayer.bringToFront();
-  $('rainRasterStatus').textContent='Cuenca tumbes_cuenca.geojson cargada. Preparando raster ECMWF…';
-  console.info('Cuenca cargada:',basinBounds.toBBoxString());
+  $('rainRasterStatus').textContent='Cuenca cargada. Preparando raster ECMWF…';
  }catch(e){
-  console.error('No se pudo cargar la cuenca GeoJSON:',e);
-  setRainStatus('No se pudo dibujar la cuenca: '+e.message+'. Verifica que exista shape/tumbes_cuenca.geojson en GitHub.');
+  console.error('Error al cargar cuenca GeoJSON:',e);
+  setRainStatus('No se pudo dibujar la cuenca: '+e.message);
  }
 }
 
@@ -290,7 +268,7 @@ async function loadRain(){
  if(model!=='ecmwf'){
   if(ecmwfLayer){app.maps.rain.removeLayer(ecmwfLayer);ecmwfLayer=null}
   app.rain=await tryJson([`data/pronostico_${model}.json`]);updateRain();
-  setRainStatus('El visor de GeoTIFF está conectado actualmente a ECMWF. GFS se conectará después.');
+  setRainStatus('El visor está conectado actualmente a ECMWF.');
   return;
  }
  try{
@@ -299,62 +277,74 @@ async function loadRain(){
   const options=(ecmwfCatalog.rasters||[]).slice().sort((a,b)=>a.horizonte_h-b.horizonte_h);
   if(options.length){
    $('rainTime').innerHTML=options.map(r=>`<option value="${r.horizonte_h}">+${String(r.horizonte_h).padStart(2,'0')} h · ${r.fecha_peru||''}</option>`).join('');
-   if(!options.some(r=>r.horizonte_h===hourValue('rainTime'))) $('rainTime').value=String(options[0].horizonte_h);
    await loadEcmwfRaster();
   } else setRainStatus('El catálogo ECMWF no contiene rásteres.');
- }catch(e){setRainStatus('No se pudo leer ./data/pronostico_ecmwf.json: '+e.message+'. Comprueba que el catálogo esté publicado en GitHub.');console.error(e);}
+ }catch(e){setRainStatus('No se pudo leer ./data/pronostico_ecmwf.json: '+e.message);console.error(e);}
 }
+
 async function loadEcmwfRaster(){
  if($('rainModel').value.toLowerCase()!=='ecmwf'||!ecmwfCatalog)return;
  const h=hourValue('rainTime'),item=(ecmwfCatalog.rasters||[]).find(r=>Number(r.horizonte_h)===h);
  if(!item){setRainStatus(`No existe un GeoTIFF ECMWF para el horizonte +${h} h.`);return}
  const token=++ecmwfLoadToken;
- // Retirar inmediatamente el ráster anterior. Así nunca queda visible mientras
- // se descarga el nuevo horizonte ni se confunde una imagen vieja con la nueva.
- if(ecmwfLayer){try{app.maps.rain.removeLayer(ecmwfLayer)}catch(e){} ecmwfLayer=null}
+
+ if(ecmwfLayer){
+  try{app.maps.rain.removeLayer(ecmwfLayer)}catch(e){}
+  ecmwfLayer=null;
+ }
  ecmwfRaster=null;
  if(ecmwfPaneName){
   const oldPane=app.maps.rain.getPane(ecmwfPaneName);
   if(oldPane){oldPane.replaceChildren();oldPane.remove()}
   ecmwfPaneName=null;
  }
- // El nombre único de pane fuerza a Leaflet a crear una capa de dibujo limpia
- // para cada horizonte y evita reutilizar el canvas anterior.
+
  ecmwfPaneName='rainRasterPane_'+token;
  const pane=app.maps.rain.createPane(ecmwfPaneName);
- pane.style.zIndex='350';pane.style.pointerEvents='none';
+ pane.style.zIndex='350';
+ pane.style.pointerEvents='none';
+
  setRainStatus(`Cargando ráster ECMWF +${String(h).padStart(2,'0')} h: ${item.archivo_origen||item.raster}…`);
  $('rainPixelValue').textContent='Cargando nuevo ráster…';
  try{
   const relativePath=String(item.raster||'').replace(/^\.\//,'');
-  if(!relativePath)throw new Error('el catálogo no contiene la ruta del GeoTIFF para este horizonte');
+  if(!relativePath)throw new Error('el catálogo no contiene la ruta del GeoTIFF');
   const rasterUrl=new URL(relativePath,document.baseURI);
-  // Evitar caché del navegador y distinguir cada horizonte durante la descarga.
   rasterUrl.searchParams.set('horizonte',String(h));
   rasterUrl.searchParams.set('_refresh',String(Date.now())+'_'+token);
+
   const response=await fetch(rasterUrl.href,{cache:'no-store'});
   if(!response.ok)throw new Error('HTTP '+response.status+' al abrir '+relativePath);
   const buffer=await response.arrayBuffer();
-  if(buffer.byteLength<8)throw new Error(`el archivo publicado solo tiene ${buffer.byteLength} bytes; no contiene un GeoTIFF completo`);
-  const signature=new Uint8Array(buffer,0,4);
-  const isTiff=(signature[0]===0x49&&signature[1]===0x49&&(signature[2]===42||signature[2]===43)&&signature[3]===0) || (signature[0]===0x4d&&signature[1]===0x4d&&signature[2]===0&&(signature[3]===42||signature[3]===43));
-  if(!isTiff)throw new Error('el archivo descargado no tiene firma TIFF; revisa la ruta publicada');
+  if(token!==ecmwfLoadToken)return;
+
+  if(buffer.byteLength<8)throw new Error(`archivo incompleto (${buffer.byteLength} bytes)`);
   const geo=await parseGeoraster(buffer);
   if(token!==ecmwfLoadToken)return;
+
   const vals=(geo.values&&geo.values[0])||[];let min=Infinity,max=-Infinity,validCount=0;
   for(let y=0;y<vals.length;y+=Math.max(1,Math.floor(vals.length/400)))for(let x=0;x<(vals[y]||[]).length;x+=Math.max(1,Math.floor((vals[y]||[]).length/400))){const v=Number(vals[y][x]);if(Number.isFinite(v)&&v>=0){min=Math.min(min,v);max=Math.max(max,v);validCount++}}
-  if(!validCount)throw new Error('el GeoTIFF no contiene valores de precipitación válidos');
-  const layer=new GeoRasterLayer({georaster:geo,pane:ecmwfPaneName,opacity:.92,resolution:512,pixelValuesToColorFn:values=>rainColor(Number(values[0]))});
+
+  const layer=new GeoRasterLayer({
+   georaster:geo,
+   pane:ecmwfPaneName,
+   opacity:.92,
+   resolution:512,
+   pixelValuesToColorFn:values=>rainColor(Number(values[0]))
+  });
+
   if(token!==ecmwfLoadToken)return;
-  // La capa anterior ya fue retirada; instalar solo la imagen del horizonte elegido.
-  ecmwfRaster=geo;ecmwfLayer=layer;layer.addTo(app.maps.rain);
+
+  ecmwfRaster=geo;
+  ecmwfLayer=layer;
+  layer.addTo(app.maps.rain);
+
   if(cuencaLayer)cuencaLayer.bringToFront();
   formatRainLegend();
   $('rainMapLabel').textContent=`ECMWF · intervalo 3 h · +${String(h).padStart(2,'0')} h`;
-  setRainStatus(`Ráster ACTUAL: +${String(h).padStart(2,'0')} h · archivo ${item.archivo_origen||relativePath} · ${relativePath} · válido ${item.fecha_peru||'—'} · ${(buffer.byteLength/1024).toFixed(1)} KB · rango ${num(min)}–${num(max)} mm.`);
-  $('rainPixelValue').textContent='Mueve el cursor sobre el ráster para consultar la precipitación del horizonte seleccionado.';
+  setRainStatus(`Ráster ACTUAL: +${String(h).padStart(2,'0')} h · archivo ${item.archivo_origen||relativePath} · rango ${num(min)}–${num(max)} mm.`);
+  $('rainPixelValue').textContent='Mueve el cursor sobre el ráster para consultar la precipitación del píxel.';
   app.maps.rain.invalidateSize({pan:false});
-  console.info('ECMWF cargado para horizonte',h,'archivo',relativePath,'bytes',buffer.byteLength,'rango',min,max,'token',token);
  }catch(e){
   if(token!==ecmwfLoadToken)return;
   ecmwfRaster=null;ecmwfLayer=null;
@@ -362,6 +352,7 @@ async function loadEcmwfRaster(){
   console.error('Error cargando ráster ECMWF horizonte '+h,e);
  }
 }
+
 function pixelRainAt(latlng){
  if(!ecmwfRaster)return null;
  try{
@@ -375,11 +366,12 @@ function pixelRainAt(latlng){
   const value=Number(band[row][col]);return Number.isFinite(value)&&value>=0?value:null;
  }catch(e){return null}
 }
-function updateRain(){
- const model=$('rainModel').value,product=$('rainProduct').value,h=hourValue('rainTime');
- $('rainMapLabel').textContent=`ECMWF · intervalo 3 h · +${String(h).padStart(2,'0')} h`;
 
+function updateRain(){
+ const h=hourValue('rainTime');
+ $('rainMapLabel').textContent=`ECMWF · intervalo 3 h · +${String(h).padStart(2,'0')} h`;
 }
+
 async function loadFlow(){app.flow=await tryJson(['data/pronostico_caudal.json']);updateFlow()}
 function updateFlow(){
  const observed=app.flow&&app.flow.observado||[],forecast=app.flow&&app.flow.pronostico||[],rows=[];
@@ -405,58 +397,14 @@ function updateFlow(){
   {label:'Promedio',data:rows.map(r=>r.mean),borderColor:'#20a68a',borderDash:[5,3],pointRadius:2,tension:.2}
  ],'Caudal (m³/s)');
 }
+
 async function loadFlood(){
- const h=hourValue('floodTime'),model=$('floodScenario').value,t=app.times.find(x=>x.h===h),key=String(h).padStart(2,'0');
- $('floodMapLabel').textContent=`+${h} h · ${fmtDate(t.date)} · ${model}`;$('floodHour').textContent=`+${h} h · ${fmtDate(t.date)}`;$('floodFlow').textContent='—';$('floodArea').textContent='—';
+ const h=hourValue('floodTime'),model=$('floodScenario').value,t=app.times.find(x=>x.h===h),key=String(h).padStart(2,'0');$('floodMapLabel').textContent=`+${h} h · ${fmtDate(t.date)} · ${model}`;$('floodHour').textContent=`+${h} h · ${fmtDate(t.date)}`;$('floodFlow').textContent='—';$('floodArea').textContent='—';
  if(app.floodLayer)app.maps.flood.removeLayer(app.floodLayer);app.floodLayer=null;
  const geo=await tryJson([`manchas/${model}_${key}h.geojson`,`manchas/${model}_H${key}.geojson`,`manchas/H${key}.geojson`]);
- if(!geo){$('floodNote').textContent=`No se encontró GeoJSON para +${h} h. Archivo esperado: manchas/${model}_${key}h.geojson. El mapa base no es una inundación.`;return}
+ if(!geo){$('floodNote').textContent=`No se encontró GeoJSON para +${h} h. Archivo esperado: manchas/${model}_${key}h.geojson.`;return}
  app.floodLayer=L.geoJSON(geo,{style:{color:'#0877df',weight:1.5,fillColor:'#168ee8',fillOpacity:Number($('floodOpacity').value)/100}}).addTo(app.maps.flood);
  if(app.floodLayer.getBounds().isValid())app.maps.flood.fitBounds(app.floodLayer.getBounds(),{padding:[15,15]});
- $('floodNote').textContent='GeoJSON cargado. La superficie inundada requiere cálculo geoespacial.';
+ $('floodNote').textContent='GeoJSON cargado.';
  const r=app.flow&&app.flow.pronostico&&app.flow.pronostico.find(x=>Number(x.horizonte_h)===h);
- if(r){let q=model==='GFS'?r.caudal_gfs_m3s:model==='ECMWF'?r.caudal_ecmwf_m3s:(Number(r.caudal_gfs_m3s)+Number(r.caudal_ecmwf_m3s))/2;if(Number.isFinite(Number(q)))$('floodFlow').textContent=num(q)+' m³/s'}
-}
-async function loadImpacts(){
- const h=hourValue('impactTime'),model=$('impactModel').value,key=String(h).padStart(2,'0');
- $('impactMapLabel').textContent=`+${h} h · ${model}`;
- if(app.impactFlood)app.maps.impact.removeLayer(app.impactFlood);app.impactFlood=null;
- const geo=await tryJson([`manchas/${model}_${key}h.geojson`,`manchas/${model}_H${key}.geojson`,`manchas/H${key}.geojson`]);
- if(geo)app.impactFlood=L.geoJSON(geo,{style:{color:'#0877df',weight:1,fillColor:'#168ee8',fillOpacity:Number($('impactOpacity').value)/100}}).addTo(app.maps.impact);
- Object.values(app.layers).forEach(l=>app.maps.impact.removeLayer(l));app.layers={};
- const colors={viviendas:'#1587e8',poblacion:'#1587e8',colegios:'#e34e58',salud:'#e34e58',puentes:'#24966b',vias:'#f29b38',cultivos:'#a47ad8',critica:'#a47ad8'};
- for(const c of document.querySelectorAll('#impactLayers input')){
-  const data=await tryJson([`impactos/${c.value}.geojson`]);if(!data)continue;
-  const color=colors[c.value];
-  app.layers[c.value]=L.geoJSON(data,{style:{color,weight:3},pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:5,color,fillColor:color,fillOpacity:.9}),onEachFeature:(f,l)=>{const p=f.properties||{};l.bindPopup(p.nombre||p.name||c.value)}});
-  if(c.checked)app.layers[c.value].addTo(app.maps.impact);
- }
- refreshLayers();
- ['impactPopulation','impactBuildings','impactOther'].forEach(id=>$(id).textContent='—');
-}
-function refreshLayers(){
- document.querySelectorAll('#impactLayers input').forEach(c=>{const l=app.layers[c.value];if(!l)return;if(c.checked&&!app.maps.impact.hasLayer(l))l.addTo(app.maps.impact);if(!c.checked&&app.maps.impact.hasLayer(l))app.maps.impact.removeLayer(l)});
-}
-$('rainModel').onchange=loadRain;$('rainProduct').onchange=updateRain;$('rainTime').onchange=()=>{updateRain();loadEcmwfRaster()};$('reloadRain').onclick=async()=>{await loadRain()};
-$('reloadFlow').onclick=loadFlow;$('applyThresholds').onclick=updateFlow;
-$('floodTime').onchange=loadFlood;$('floodScenario').onchange=loadFlood;$('loadFlood').onclick=loadFlood;
-$('floodOpacity').oninput=()=>{if(app.floodLayer)app.floodLayer.setStyle({fillOpacity:Number($('floodOpacity').value)/100})};
-$('impactTime').onchange=loadImpacts;$('impactModel').onchange=loadImpacts;$('refreshImpact').onclick=loadImpacts;
-$('impactOpacity').oninput=()=>{if(app.impactFlood)app.impactFlood.setStyle({fillOpacity:Number($('impactOpacity').value)/100})};
-document.querySelectorAll('#impactLayers input').forEach(c=>c.onchange=refreshLayers);
-
-createTimes();
-app.maps.rain=makeMap('rainMap',9,false);app.maps.flood=makeMap('floodMap',12);app.maps.impact=makeMap('impactMap',12);
-app.maps.rain.setView([-3.65,-80.45],9);app.maps.flood.setView(CENTER,12);app.maps.impact.setView(CENTER,12);
-app.maps.rain.on('mousemove',e=>{const v=pixelRainAt(e.latlng);$('rainPixelValue').textContent=v===null?'Píxel: sin dato o fuera del raster.':`Precipitación ECMWF en el píxel: ${num(v)} mm · Lat ${e.latlng.lat.toFixed(5)} · Lon ${e.latlng.lng.toFixed(5)}`});
-app.maps.rain.on('mouseout',()=>{$('rainPixelValue').textContent='Mueve el cursor sobre el raster ECMWF para consultar la precipitación del píxel.'});
-makeChart('flowChart',[],[
- {label:'Observado',data:[],borderColor:'#526a78'},
- {label:'GFS',data:[],borderColor:'#238dcc'},
- {label:'ECMWF',data:[],borderColor:'#df5656'},
- {label:'Promedio',data:[],borderColor:'#20a68a'}
-],'Caudal (m³/s)');
-(async()=>{await loadCuenca();await loadRain();})();loadFlow();loadFlood();loadImpacts();
-</script>
-</body>
-</html>
+ if(r){let q=model==='GFS'?r.caudal_gfs_m3
