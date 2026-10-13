@@ -172,6 +172,9 @@ $('menuBtn').onclick=()=>$('nav').classList.toggle('open');
 
 function makeMap(id,zoom=10,locked=false){
  const map=L.map(id,{dragging:!locked,touchZoom:!locked,scrollWheelZoom:!locked,doubleClickZoom:!locked,boxZoom:!locked,keyboard:!locked,zoomControl:!locked, attributionControl:true}).setView(CENTER,zoom);
+ // El raster debe estar por encima de cualquier mapa base y debajo del contorno de cuenca.
+ // Los mapas base de Leaflet usan tilePane (z-index 200); este panel usa 350.
+ if(id==='rainMap'){const pane=map.createPane('rainRasterPane');pane.style.zIndex='350';pane.style.pointerEvents='none';}
  const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
  const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles &copy; Esri'});
  if(!locked)L.control.layers({'Mapa base':osm,'Imagen satelital':sat}).addTo(map);
@@ -301,13 +304,12 @@ async function loadEcmwfRaster(){
   for(let y=0;y<vals.length;y+=Math.max(1,Math.floor(vals.length/400)))for(let x=0;x<(vals[y]||[]).length;x+=Math.max(1,Math.floor((vals[y]||[]).length/400))){const v=Number(vals[y][x]);if(Number.isFinite(v)&&v>=0){min=Math.min(min,v);max=Math.max(max,v);validCount++}}
   if(!validCount)throw new Error('el GeoTIFF no contiene valores de precipitación válidos');
   if(!Number.isFinite(max)||max<=0)max=1;
-  const layer=new GeoRasterLayer({georaster:geo,opacity:.92,resolution:512,pixelValuesToColorFn:values=>{const v=Number(values[0]);if(!Number.isFinite(v)||v<0)return null;return v===0?'rgba(255,255,255,0)':rainColor(v,max)}});
+  const layer=new GeoRasterLayer({georaster:geo,pane:'rainRasterPane',opacity:.92,resolution:512,pixelValuesToColorFn:values=>{const v=Number(values[0]);if(!Number.isFinite(v)||v<0)return null;return v===0?'rgba(255,255,255,0)':rainColor(v,max)}});
   if(token!==ecmwfLoadToken)return;
   if(ecmwfLayer)app.maps.rain.removeLayer(ecmwfLayer);
   ecmwfRaster=geo;ecmwfLayer=layer;layer.addTo(app.maps.rain);
-  // Asegurar que el raster y la cuenca sean visibles juntos, pero no mover el encuadre
-  // si ya se fijó en la cuenca. Solo hacer zoom a la cuenca si aún no se ha cargado.
-  layer.bringToBack();
+  // El raster permanece en rainRasterPane (z-index 350): siempre sobre el mapa base
+  // y debajo de la cuenca, incluso al cambiar entre mapa base e imagen satelital.
   if(cuencaLayer)cuencaLayer.bringToFront();
   formatRainLegend(max);
   $('rainMapLabel').textContent=`ECMWF · intervalo 3 h · +${String(h).padStart(2,'0')} h`;
