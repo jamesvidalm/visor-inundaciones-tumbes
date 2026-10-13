@@ -55,13 +55,13 @@ main{max-width:1600px;margin:auto;padding:22px 25px 35px}.page{display:none}.pag
 <section class="page" id="page-precipitacion">
  <div class="pagehead"><div><div class="eyebrow">Módulo 02</div><h1>Pronóstico de precipitación</h1><p>Comparación espacial y temporal de GFS y ECMWF. Horizonte de 72 horas, paso de 3 horas.</p></div><button class="btn alt" id="reloadRain">Recargar datos</button></div>
  <div class="controls">
-  <div class="field"><label>Modelo</label><select id="rainModel"><option>GFS</option><option>ECMWF</option></select></div>
+  <div class="field"><label>Modelo</label><select id="rainModel"><option>GFS</option><option selected>ECMWF</option></select></div>
   <div class="field"><label>Producto</label><select id="rainProduct"><option value="interval">Intervalo de 3 horas</option><option value="acc24">Acumulada 24 horas</option><option value="acc72">Acumulada 72 horas</option></select></div>
   <div class="field"><label>Hora de pronóstico (Perú)</label><select id="rainTime"></select></div>
   <div class="field"><label>Estación / punto</label><select id="rainStation"><option>Tumbes</option><option>El Tigre</option><option>Matapalo</option><option>La Cruz</option><option>Corrales</option></select></div>
  </div>
  <div class="grid cols2">
-  <div class="card"><div class="cardhead"><h3>Mapa de precipitación</h3><span class="muted" id="rainMapLabel">GFS · intervalo 3 h</span></div><div id="rainMap" class="map"></div><div class="empty">El mapa base es de referencia. El campo de precipitación se agregará al conectar el raster real.</div></div>
+  <div class="card"><div class="cardhead"><h3>Mapa de precipitación</h3><span class="muted" id="rainMapLabel">GFS · intervalo 3 h</span></div><div id="rainMap" class="map"></div><div class="empty" id="rainRasterNote">Esperando el catálogo publicado de rásteres ECMWF/GFS.</div></div>
   <div class="grid">
    <div class="card"><div class="cardhead"><h3>Precipitación por estación</h3><span class="muted">mm</span></div><div id="rainBars" class="tablewrap"></div><div class="empty" id="rainStationNote">Sin datos de precipitación cargados.</div></div>
    <div class="card"><div class="cardhead"><h3>Serie temporal</h3><span class="muted">Cada 3 horas · 72 h</span></div><div class="chart"><canvas id="rainChart"></canvas></div><div class="empty" id="rainChartNote">Esperando los archivos de pronóstico.</div></div>
@@ -159,7 +159,7 @@ main{max-width:1600px;margin:auto;padding:22px 25px 35px}.page{display:none}.pag
 <script>
 const $=id=>document.getElementById(id);
 const CENTER=[-3.65,-80.45];
-const app={maps:{},charts:{},flow:null,rain:null,layers:{},floodLayer:null,impactFlood:null,times:[]};
+const app={maps:{},charts:{},flow:null,rain:null,rainOverlay:null,layers:{},floodLayer:null,impactFlood:null,times:[]};
 
 function switchPage(name){
  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+name));
@@ -183,9 +183,7 @@ function makeChart(id,labels,datasets,yTitle=''){
  app.charts[id]=new Chart($(id),{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,font:{size:10}}}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:8,maxRotation:0,font:{size:10}}},y:{beginAtZero:true,title:{display:!!yTitle,text:yTitle},grid:{color:'#edf2f3'}}}}});
 }
 function createTimes(){
- const now=new Date(),peru=new Date(now.getTime()-5*3600000);
- peru.setUTCMinutes(0,0,0);
- const start=new Date(peru.getTime()+5*3600000);
+ const now=new Date(),start=new Date(now.getTime());start.setUTCMinutes(0,0,0);
  for(let h=0;h<=72;h+=3)app.times.push({h,date:new Date(start.getTime()+h*3600000)});
  ['rainTime','flowStart','floodTime','impactTime'].forEach(id=>$(id).innerHTML=app.times.map(t=>`<option value="${t.h}">+${String(t.h).padStart(2,'0')} h · ${fmtDate(t.date)}</option>`).join(''));
 }
