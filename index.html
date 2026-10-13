@@ -193,7 +193,7 @@ function threshold(q){
  if(!Number.isFinite(q))return ['Sin datos','bnone'];
  if(q>=r)return ['Rojo','bred'];if(q>=o)return ['Naranja','borange'];if(q>=y)return ['Amarillo','byellow'];return ['Bajo umbral','bgreen'];
 }
-async function fetchJson(path){const url='./'+path.replace(/^\.\//,'')+'?v='+Date.now();const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error(`${path} (HTTP ${r.status})`);return r.json()}
+async function fetchJson(path){const clean=path.replace(/^\.\//,'');const url=new URL(clean,document.baseURI).href+'?v='+Date.now();const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error(`${clean} (HTTP ${r.status})`);return r.json()}
 async function tryJson(paths){for(const p of paths){try{return await fetchJson(p)}catch(e){}}return null}
 
 /*
@@ -227,22 +227,27 @@ async function loadCuenca(){
  try{
   const data=await fetchJson('shape/tumbes_cuenca.geojson');
   if(cuencaLayer)app.maps.rain.removeLayer(cuencaLayer);
-  cuencaLayer=L.geoJSON(data,{style:{color:'#173f52',weight:2.5,opacity:.98,fillColor:'#25b7a5',fillOpacity:.035,dashArray:'6 4'},interactive:false}).addTo(app.maps.rain);
+  cuencaLayer=L.geoJSON(data,{style:{color:'#073b4c',weight:3,opacity:1,fillColor:'#22c7b8',fillOpacity:0.04,dashArray:'7 4'},interactive:false}).addTo(app.maps.rain);
   const basinBounds=cuencaLayer.getBounds();
-  if(basinBounds && basinBounds.isValid()){
-   // El encuadre inicial corresponde al polígono de la cuenca, no al raster completo.
-   app.maps.rain.fitBounds(basinBounds,{padding:[28,28],animate:false});
-   // Restringe el mapa al entorno inmediato de la cuenca y conserva el encuadre.
-   app.maps.rain.setMaxBounds(basinBounds.pad(0.04));
-   app.maps.rain.options.maxBoundsViscosity=1;
-   app.maps.rain.options.minZoom=app.maps.rain.getZoom();
-   app.maps.rain.options.maxZoom=app.maps.rain.getZoom();
-   rainBoundsLocked=true;
-   app.maps.rain.invalidateSize({pan:false});
-  }
+  if(!basinBounds || !basinBounds.isValid()) throw new Error('El GeoJSON no contiene geometrías con coordenadas válidas.');
+  // El encuadre se calcula exclusivamente con la cuenca, no con todo el Perú ni con el raster.
+  app.maps.rain.fitBounds(basinBounds,{padding:[35,35],animate:false});
+  const basinZoom=app.maps.rain.getZoom();
+  app.maps.rain.setMaxBounds(basinBounds.pad(0.12));
+  app.maps.rain.options.maxBoundsViscosity=1;
+  // Mantener el encuadre fijo; el usuario no puede arrastrar la vista fuera de la cuenca.
+  app.maps.rain.setMinZoom(basinZoom);
+  app.maps.rain.setMaxZoom(basinZoom);
+  app.maps.rain.dragging.disable(); app.maps.rain.touchZoom.disable(); app.maps.rain.scrollWheelZoom.disable();
+  app.maps.rain.doubleClickZoom.disable(); app.maps.rain.boxZoom.disable(); app.maps.rain.keyboard.disable();
+  app.maps.rain.invalidateSize({pan:false});
   cuencaLayer.bringToFront();
-  console.info('Cuenca tumbes_cuenca.geojson cargada desde GitHub Pages y mapa centrado en sus límites.');
- }catch(e){console.warn('No se pudo cargar ./shape/tumbes_cuenca.geojson. Verifica que esté publicado en GitHub Pages.',e)}
+  $('rainRasterStatus').textContent='Cuenca tumbes_cuenca.geojson cargada. Preparando raster ECMWF…';
+  console.info('Cuenca cargada:',basinBounds.toBBoxString());
+ }catch(e){
+  console.error('No se pudo cargar la cuenca GeoJSON:',e);
+  setRainStatus('No se pudo dibujar la cuenca: '+e.message+'. Verifica que exista shape/tumbes_cuenca.geojson en GitHub.');
+ }
 }
 
 async function loadRain(){
@@ -268,29 +273,39 @@ async function loadEcmwfRaster(){
  if($('rainModel').value.toLowerCase()!=='ecmwf'||!ecmwfCatalog)return;
  const h=hourValue('rainTime'),item=(ecmwfCatalog.rasters||[]).find(r=>Number(r.horizonte_h)===h);
  if(!item){setRainStatus(`No existe un GeoTIFF ECMWF para el horizonte +${h} h.`);return}
- const token=++ecmwfLoadToken;setRainStatus(`Cargando precipitación ECMWF para +${String(h).padStart(2,'0')} h…`);
+ const token=++ecmwfLoadToken;
+ setRainStatus(`Descargando GeoTIFF ECMWF para +${String(h).padStart(2,'0')} h…`);
  try{
-  const response=await fetch(item.raster+'?v='+Date.now(),{cache:'no-store'});
-  if(!response.ok)throw new Error('HTTP '+response.status+' al abrir '+item.raster);
+  const rasterUrl=new URL(String(item.raster).replace(/^\.\//,''),document.baseURI).href;
+  const response=await fetch(rasterUrl+'?v='+Date.now(),{cache:'no-store'});
+  if(!response.ok)throw new Error('HTTP '+response.status+' al abrir '+rasterUrl);
   const buffer=await response.arrayBuffer();
-  if(buffer.byteLength<1000)throw new Error(`el archivo descargado solo tiene ${buffer.byteLength} bytes; parece incompleto y no un GeoTIFF válido`);
+  if(buffer.byteLength<1000)throw new Error(`el archivo descargado solo tiene ${buffer.byteLength} bytes; no parece un GeoTIFF válido`);
+  // GeoTIFF clásico/BigTIFF debe tener firma II* o MM* en sus primeros bytes.
+  const signature=new Uint8Array(buffer,0,4);
+  const isTiff=(signature[0]===0x49&&signature[1]===0x49&&(signature[2]===42||signature[2]===43)&&signature[3]===0) || (signature[0]===0x4d&&signature[1]===0x4d&&signature[2]===0&&(signature[3]===42||signature[3]===43));
+  if(!isTiff)throw new Error('el archivo descargado no tiene firma TIFF; puede ser una página HTML o un archivo incorrecto');
   const geo=await parseGeoraster(buffer);
   if(token!==ecmwfLoadToken)return;
-  const vals=(geo.values&&geo.values[0])||[];let min=Infinity,max=-Infinity;
-  for(let y=0;y<vals.length;y+=Math.max(1,Math.floor(vals.length/300)))for(let x=0;x<(vals[y]||[]).length;x+=Math.max(1,Math.floor((vals[y]||[]).length/300))){const v=Number(vals[y][x]);if(Number.isFinite(v)&&v>=0){min=Math.min(min,v);max=Math.max(max,v)}}
-  if(!Number.isFinite(max))max=1; if(max<=0)max=1;
-  const layer=new GeoRasterLayer({georaster:geo,opacity:.78,resolution:256,pixelValuesToColorFn:values=>{const v=Number(values[0]);if(!Number.isFinite(v)||v<0)return null;return rainColor(v,max)}});
+  const vals=(geo.values&&geo.values[0])||[];let min=Infinity,max=-Infinity,validCount=0;
+  for(let y=0;y<vals.length;y+=Math.max(1,Math.floor(vals.length/400)))for(let x=0;x<(vals[y]||[]).length;x+=Math.max(1,Math.floor((vals[y]||[]).length/400))){const v=Number(vals[y][x]);if(Number.isFinite(v)&&v>=0){min=Math.min(min,v);max=Math.max(max,v);validCount++}}
+  if(!validCount)throw new Error('el GeoTIFF no contiene valores de precipitación válidos');
+  if(!Number.isFinite(max)||max<=0)max=1;
+  const layer=new GeoRasterLayer({georaster:geo,opacity:.82,resolution:256,pixelValuesToColorFn:values=>{const v=Number(values[0]);if(!Number.isFinite(v)||v<0)return null;return rainColor(v,max)}});
   if(token!==ecmwfLoadToken)return;
   if(ecmwfLayer)app.maps.rain.removeLayer(ecmwfLayer);
   ecmwfRaster=geo;ecmwfLayer=layer;layer.addTo(app.maps.rain);
-  const bounds=layer.getBounds();
-  // El encuadre lo define tumbes_cuenca.geojson, no el dominio del GeoTIFF.
-  // Al cambiar de horizonte solo se reemplaza el raster y se mantiene la vista de la cuenca.
+  // Asegurar que el raster y la cuenca sean visibles juntos, pero no mover el encuadre
+  // si ya se fijó en la cuenca. Solo hacer zoom a la cuenca si aún no se ha cargado.
+  layer.bringToBack();
+  if(cuencaLayer)cuencaLayer.bringToFront();
   formatRainLegend(max);
   $('rainMapLabel').textContent=`ECMWF · intervalo 3 h · +${String(h).padStart(2,'0')} h`;
-  setRainStatus(`ECMWF · ciclo ${ecmwfCatalog.ciclo_utc||'—'} · válido ${item.fecha_peru||'—'} · GeoTIFF original cargado. Valor del raster: ${num(min)}–${num(max)} mm por píxel.`);
- }catch(e){setRainStatus('Error al cargar el GeoTIFF: '+e.message);console.error(e)}
+  setRainStatus(`ECMWF · ciclo ${ecmwfCatalog.ciclo_utc||'—'} · válido ${item.fecha_peru||'—'} · GeoTIFF válido (${(buffer.byteLength/1024).toFixed(1)} KB) · precipitación ${num(min)}–${num(max)} mm.`);
+  app.maps.rain.invalidateSize({pan:false});
+ }catch(e){setRainStatus('No se pudo mostrar el raster ECMWF: '+e.message);console.error(e)}
 }
+
 function pixelRainAt(latlng){
  if(!ecmwfRaster)return null;
  try{
@@ -384,7 +399,7 @@ makeChart('flowChart',[],[
  {label:'ECMWF',data:[],borderColor:'#df5656'},
  {label:'Promedio',data:[],borderColor:'#20a68a'}
 ],'Caudal (m³/s)');
-loadRain();loadCuenca();loadFlow();loadFlood();loadImpacts();
+(async()=>{await loadCuenca();await loadRain();})();loadFlow();loadFlood();loadImpacts();
 </script>
 </body>
 </html>
