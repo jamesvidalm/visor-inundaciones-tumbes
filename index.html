@@ -233,13 +233,19 @@ async function loadCuenca(){
   // El encuadre se calcula exclusivamente con la cuenca, no con todo el Perú ni con el raster.
   app.maps.rain.fitBounds(basinBounds,{padding:[35,35],animate:false});
   const basinZoom=app.maps.rain.getZoom();
-  app.maps.rain.setMaxBounds(basinBounds.pad(0.12));
-  app.maps.rain.options.maxBoundsViscosity=1;
-  // Mantener el encuadre fijo; el usuario no puede arrastrar la vista fuera de la cuenca.
-  app.maps.rain.setMinZoom(basinZoom);
-  app.maps.rain.setMaxZoom(basinZoom);
-  app.maps.rain.dragging.disable(); app.maps.rain.touchZoom.disable(); app.maps.rain.scrollWheelZoom.disable();
-  app.maps.rain.doubleClickZoom.disable(); app.maps.rain.boxZoom.disable(); app.maps.rain.keyboard.disable();
+  // La cuenca define el encuadre inicial, pero el usuario puede acercarse y alejarse.
+  // Se permite zoom de 5 a 18; se limita el arrastre para no perder fácilmente la cuenca.
+  app.maps.rain.setMinZoom(5);
+  app.maps.rain.setMaxZoom(18);
+  app.maps.rain.setMaxBounds(basinBounds.pad(0.75));
+  app.maps.rain.options.maxBoundsViscosity=0.65;
+  app.maps.rain.dragging.enable();
+  app.maps.rain.touchZoom.enable();
+  app.maps.rain.scrollWheelZoom.enable();
+  app.maps.rain.doubleClickZoom.enable();
+  app.maps.rain.boxZoom.enable();
+  app.maps.rain.keyboard.enable();
+  if(!app.maps.rain.zoomControl) L.control.zoom({position:'topright'}).addTo(app.maps.rain);
   app.maps.rain.invalidateSize({pan:false});
   cuencaLayer.bringToFront();
   $('rainRasterStatus').textContent='Cuenca tumbes_cuenca.geojson cargada. Preparando raster ECMWF…';
@@ -389,7 +395,7 @@ $('impactOpacity').oninput=()=>{if(app.impactFlood)app.impactFlood.setStyle({fil
 document.querySelectorAll('#impactLayers input').forEach(c=>c.onchange=refreshLayers);
 
 createTimes();
-app.maps.rain=makeMap('rainMap',9,true);app.maps.flood=makeMap('floodMap',12);app.maps.impact=makeMap('impactMap',12);
+app.maps.rain=makeMap('rainMap',9,false);app.maps.flood=makeMap('floodMap',12);app.maps.impact=makeMap('impactMap',12);
 app.maps.rain.setView([-3.65,-80.45],9);app.maps.flood.setView(CENTER,12);app.maps.impact.setView(CENTER,12);
 app.maps.rain.on('mousemove',e=>{const v=pixelRainAt(e.latlng);$('rainPixelValue').textContent=v===null?'Píxel: sin dato o fuera del raster.':`Precipitación ECMWF en el píxel: ${num(v)} mm · Lat ${e.latlng.lat.toFixed(5)} · Lon ${e.latlng.lng.toFixed(5)}`});
 app.maps.rain.on('mouseout',()=>{$('rainPixelValue').textContent='Mueve el cursor sobre el raster para consultar la precipitación del píxel.'});
