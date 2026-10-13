@@ -290,7 +290,7 @@ async function loadEcmwfRaster(){
   const response=await fetch(rasterUrl+'?v='+Date.now(),{cache:'no-store'});
   if(!response.ok)throw new Error('HTTP '+response.status+' al abrir '+rasterUrl);
   const buffer=await response.arrayBuffer();
-  if(buffer.byteLength<10000)throw new Error(`el archivo publicado solo tiene ${buffer.byteLength} bytes (${(buffer.byteLength/1024).toFixed(2)} KB). Es demasiado pequeño para el raster meteorológico esperado; revisa que el publicador esté copiando el GeoTIFF original completo y no un archivo vacío o truncado.`);
+  if(buffer.byteLength<8)throw new Error(`el archivo publicado solo tiene ${buffer.byteLength} bytes; no contiene un GeoTIFF completo.`);
   // GeoTIFF clásico/BigTIFF debe tener firma II* o MM* en sus primeros bytes.
   const signature=new Uint8Array(buffer,0,4);
   const isTiff=(signature[0]===0x49&&signature[1]===0x49&&(signature[2]===42||signature[2]===43)&&signature[3]===0) || (signature[0]===0x4d&&signature[1]===0x4d&&signature[2]===0&&(signature[3]===42||signature[3]===43));
