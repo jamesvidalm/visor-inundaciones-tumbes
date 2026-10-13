@@ -8,6 +8,9 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/proj4@2.11.0/dist/proj4.js"></script>
+<script src="https://unpkg.com/georaster"></script>
+<script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
 <style>
 :root{--navy:#082b43;--navy2:#0c4058;--cyan:#20d4c3;--blue:#238dcc;--bg:#f2f7f9;--text:#17364a;--muted:#708692;--border:#dce7ec;--red:#d94747;--orange:#ed8d31;--yellow:#e4b33b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px Inter,"Segoe UI",Arial,sans-serif}button,select,input{font:inherit}button,select{cursor:pointer}a{color:inherit;text-decoration:none}
@@ -55,13 +58,13 @@ main{max-width:1600px;margin:auto;padding:22px 25px 35px}.page{display:none}.pag
 <section class="page" id="page-precipitacion">
  <div class="pagehead"><div><div class="eyebrow">Módulo 02</div><h1>Pronóstico de precipitación</h1><p>Comparación espacial y temporal de GFS y ECMWF. Horizonte de 72 horas, paso de 3 horas.</p></div><button class="btn alt" id="reloadRain">Recargar datos</button></div>
  <div class="controls">
-  <div class="field"><label>Modelo</label><select id="rainModel"><option>GFS</option><option selected>ECMWF</option></select></div>
-  <div class="field"><label>Producto</label><select id="rainProduct"><option value="interval">Ráster del horizonte seleccionado</option><option value="acc24">Acumulada 24 horas (requiere producto)</option><option value="acc72">Acumulada 72 horas (requiere producto)</option></select></div>
+  <div class="field"><label>Modelo</label><select id="rainModel"><option>GFS</option><option>ECMWF</option></select></div>
+  <div class="field"><label>Producto</label><select id="rainProduct"><option value="interval">Intervalo de 3 horas</option><option value="acc24">Acumulada 24 horas</option><option value="acc72">Acumulada 72 horas</option></select></div>
   <div class="field"><label>Hora de pronóstico (Perú)</label><select id="rainTime"></select></div>
   <div class="field"><label>Estación / punto</label><select id="rainStation"><option>Tumbes</option><option>El Tigre</option><option>Matapalo</option><option>La Cruz</option><option>Corrales</option></select></div>
  </div>
  <div class="grid cols2">
-  <div class="card"><div class="cardhead"><h3>Mapa de precipitación</h3><span class="muted" id="rainMapLabel">GFS · intervalo 3 h</span></div><div id="rainMap" class="map"></div><div class="empty" id="rainRasterNote">Esperando el catálogo publicado de rásteres ECMWF/GFS.</div></div>
+  <div class="card"><div class="cardhead"><h3>Mapa de precipitación</h3><span class="muted" id="rainMapLabel">GFS · intervalo 3 h</span></div><div id="rainMap" class="map"></div><div class="legend" id="ecmwfLegend"><strong>ECMWF · precipitación (mm)</strong><span id="ecmwfLegendScale">Cargando leyenda…</span></div><div class="empty" id="rainRasterStatus">Cargando catálogo ECMWF…</div><div class="empty" id="rainPixelValue">Mueve el cursor sobre el raster para consultar la precipitación del píxel.</div></div>
   <div class="grid">
    <div class="card"><div class="cardhead"><h3>Precipitación por estación</h3><span class="muted">mm</span></div><div id="rainBars" class="tablewrap"></div><div class="empty" id="rainStationNote">Sin datos de precipitación cargados.</div></div>
    <div class="card"><div class="cardhead"><h3>Serie temporal</h3><span class="muted">Cada 3 horas · 72 h</span></div><div class="chart"><canvas id="rainChart"></canvas></div><div class="empty" id="rainChartNote">Esperando los archivos de pronóstico.</div></div>
@@ -159,7 +162,7 @@ main{max-width:1600px;margin:auto;padding:22px 25px 35px}.page{display:none}.pag
 <script>
 const $=id=>document.getElementById(id);
 const CENTER=[-3.65,-80.45];
-const app={maps:{},charts:{},flow:null,rain:null,rainOverlay:null,layers:{},floodLayer:null,impactFlood:null,times:[]};
+const app={maps:{},charts:{},flow:null,rain:null,layers:{},floodLayer:null,impactFlood:null,times:[]};
 
 function switchPage(name){
  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+name));
@@ -183,7 +186,9 @@ function makeChart(id,labels,datasets,yTitle=''){
  app.charts[id]=new Chart($(id),{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,font:{size:10}}}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:8,maxRotation:0,font:{size:10}}},y:{beginAtZero:true,title:{display:!!yTitle,text:yTitle},grid:{color:'#edf2f3'}}}}});
 }
 function createTimes(){
- const now=new Date(),start=new Date(now.getTime());start.setUTCMinutes(0,0,0);
+ const now=new Date(),peru=new Date(now.getTime()-5*3600000);
+ peru.setUTCMinutes(0,0,0);
+ const start=new Date(peru.getTime()+5*3600000);
  for(let h=0;h<=72;h+=3)app.times.push({h,date:new Date(start.getTime()+h*3600000)});
  ['rainTime','flowStart','floodTime','impactTime'].forEach(id=>$(id).innerHTML=app.times.map(t=>`<option value="${t.h}">+${String(t.h).padStart(2,'0')} h · ${fmtDate(t.date)}</option>`).join(''));
 }
@@ -211,36 +216,76 @@ salud.geojson, puentes.geojson, vias.geojson, cultivos.geojson, critica.geojson
 Son nombres previstos, no archivos ni pronósticos que ya existan.
 */
 
+let ecmwfCatalog=null, ecmwfRaster=null, ecmwfLayer=null, ecmwfLoadToken=0;
+const rainRamp=[{v:0,c:'#ffffff'},{v:0.1,c:'#c7f4ff'},{v:1,c:'#70d5ff'},{v:2.5,c:'#39a8ff'},{v:5,c:'#3677ed'},{v:10,c:'#26a269'},{v:20,c:'#f4df35'},{v:35,c:'#f49a35'},{v:50,c:'#e64b35'},{v:75,c:'#9b2fae'}];
+function rainColor(v,max){
+ if(!Number.isFinite(v)||v<0)return null;
+ const scaled=Math.max(0,Math.min(1,v/Math.max(max,0.1)));
+ const stops=[['#eafaff',0],['#8bdfff',.15],['#3188e8',.3],['#24a66a',.48],['#f1e33a',.65],['#f59b35',.8],['#e44435',.92],['#9b2fae',1]];
+ for(let i=1;i<stops.length;i++){if(scaled<=stops[i][1])return stops[i-1][0]}
+ return stops[stops.length-1][0];
+}
+function setRainStatus(msg){$('rainRasterStatus').textContent=msg}
+function formatRainLegend(max){
+ const ticks=[0,Math.max(.1,max*.2),Math.max(.2,max*.4),Math.max(.3,max*.6),Math.max(.4,max*.8),max];
+ $('ecmwfLegendScale').innerHTML=`<span style="display:inline-flex;gap:7px;align-items:center;flex-wrap:wrap">${ticks.map(v=>`<span><i class="key" style="background:${rainColor(v,max)}"></i>${num(v)} mm</span>`).join('')}</span>`;
+}
 async function loadRain(){
  const model=$('rainModel').value.toLowerCase();
- app.rain=await tryJson([`data/pronostico_${model}.json`]);
- if(model==='ecmwf' && app.rain && Array.isArray(app.rain.rasters)){
-   const rasters=app.rain.rasters;
-   $('rainTime').innerHTML=rasters.map(r=>`<option value="${r.horizonte_h}">+${String(r.horizonte_h).padStart(3,'0')} h · ${r.fecha_peru||''}</option>`).join('');
-   if(rasters.length && !rasters.some(r=>Number(r.horizonte_h)===hourValue('rainTime'))) $('rainTime').value=String(rasters[0].horizonte_h);
- } else {
-   $('rainTime').innerHTML=app.times.map(t=>`<option value="${t.h}">+${String(t.h).padStart(2,'0')} h · ${fmtDate(t.date)}</option>`).join('');
+ if(model!=='ecmwf'){
+  if(ecmwfLayer){app.maps.rain.removeLayer(ecmwfLayer);ecmwfLayer=null}
+  app.rain=await tryJson([`data/pronostico_${model}.json`]);updateRain();
+  setRainStatus('El visor de GeoTIFF está conectado actualmente a ECMWF. GFS se conectará después.');
+  return;
  }
- updateRain();
+ try{
+  ecmwfCatalog=await fetchJson('data/pronostico_ecmwf.json');
+  app.rain=ecmwfCatalog; updateRain();
+  const options=(ecmwfCatalog.rasters||[]).slice().sort((a,b)=>a.horizonte_h-b.horizonte_h);
+  if(options.length){
+   $('rainTime').innerHTML=options.map(r=>`<option value="${r.horizonte_h}">+${String(r.horizonte_h).padStart(2,'0')} h · ${r.fecha_peru||''}</option>`).join('');
+   if(!options.some(r=>r.horizonte_h===hourValue('rainTime'))) $('rainTime').value=String(options[0].horizonte_h);
+   await loadEcmwfRaster();
+  } else setRainStatus('El catálogo ECMWF no contiene rásteres.');
+ }catch(e){setRainStatus('No se pudo leer data/pronostico_ecmwf.json. Publica primero los GeoTIFF.');}
+}
+async function loadEcmwfRaster(){
+ if($('rainModel').value.toLowerCase()!=='ecmwf'||!ecmwfCatalog)return;
+ const h=hourValue('rainTime'),item=(ecmwfCatalog.rasters||[]).find(r=>Number(r.horizonte_h)===h);
+ if(!item){setRainStatus(`No existe un GeoTIFF ECMWF para el horizonte +${h} h.`);return}
+ const token=++ecmwfLoadToken;setRainStatus(`Leyendo ${item.archivo_origen||item.archivo||('horizonte +'+h+' h')}…`);
+ try{
+  const response=await fetch(item.raster+'?v='+Date.now(),{cache:'no-store'});
+  if(!response.ok)throw new Error('HTTP '+response.status+' al abrir '+item.raster);
+  const buffer=await response.arrayBuffer();
+  const geo=await parseGeoraster(buffer);
+  if(token!==ecmwfLoadToken)return;
+  const vals=(geo.values&&geo.values[0])||[];let min=Infinity,max=-Infinity;
+  for(let y=0;y<vals.length;y+=Math.max(1,Math.floor(vals.length/300)))for(let x=0;x<(vals[y]||[]).length;x+=Math.max(1,Math.floor((vals[y]||[]).length/300))){const v=Number(vals[y][x]);if(Number.isFinite(v)&&v>=0){min=Math.min(min,v);max=Math.max(max,v)}}
+  if(!Number.isFinite(max))max=1; if(max<=0)max=1;
+  const layer=new GeoRasterLayer({georaster:geo,opacity:.78,resolution:256,pixelValuesToColorFn:values=>{const v=Number(values[0]);if(!Number.isFinite(v)||v<0)return null;return rainColor(v,max)}});
+  if(ecmwfLayer)app.maps.rain.removeLayer(ecmwfLayer);
+  ecmwfRaster=geo;ecmwfLayer=layer;layer.addTo(app.maps.rain);
+  const bounds=layer.getBounds();if(bounds&&bounds.isValid())app.maps.rain.fitBounds(bounds,{padding:[12,12]});
+  formatRainLegend(max);
+  setRainStatus(`ECMWF · ciclo ${ecmwfCatalog.ciclo_utc||'—'} · válido ${item.fecha_peru||'—'} · GeoTIFF original cargado. Valor del raster: ${num(min)}–${num(max)} mm por píxel.`);
+ }catch(e){setRainStatus('Error al cargar el GeoTIFF: '+e.message);console.error(e)}
+}
+function pixelRainAt(latlng){
+ if(!ecmwfRaster)return null;
+ try{
+  let x=latlng.lng,y=latlng.lat;
+  const proj=Number(ecmwfRaster.projection);
+  if(Number.isFinite(proj)&&proj!==4326&&window.proj4){const xy=proj4('EPSG:4326','EPSG:'+proj,[x,y]);x=xy[0];y=xy[1]}
+  const col=Math.floor((x-ecmwfRaster.xmin)/ecmwfRaster.pixelWidth);
+  const row=Math.floor((ecmwfRaster.ymax-y)/ecmwfRaster.pixelHeight);
+  const band=ecmwfRaster.values&&ecmwfRaster.values[0];
+  if(!band||row<0||col<0||row>=band.length||col>=band[row].length)return null;
+  const value=Number(band[row][col]);return Number.isFinite(value)&&value>=0?value:null;
+ }catch(e){return null}
 }
 function updateRain(){
  const model=$('rainModel').value,product=$('rainProduct').value,h=hourValue('rainTime');
- if(app.rainOverlay){app.maps.rain.removeLayer(app.rainOverlay);app.rainOverlay=null;}
- if(model==='ECMWF' && app.rain && Array.isArray(app.rain.rasters)){
-   const r=app.rain.rasters.find(x=>Number(x.horizonte_h)===h);
-   if(r){
-     $('rainMapLabel').textContent=`ECMWF · +${String(h).padStart(3,'0')} h · ${r.fecha_peru||'hora Perú no disponible'}`;
-     if(r.imagen && Array.isArray(r.bounds)){
-       app.rainOverlay=L.imageOverlay(r.imagen,r.bounds,{opacity:0.82,interactive:false}).addTo(app.maps.rain);
-       app.maps.rain.fitBounds(r.bounds,{padding:[12,12]});
-     }
-     $('rainStationNote').textContent=`Ciclo ECMWF: ${app.rain.ciclo_peru||app.rain.ciclo_utc||'no indicado'}. Ráster: ${r.archivo_origen||''}.`;
-     $('rainChartNote').textContent='El mapa ráster ECMWF está cargado. Para graficar valores por estación se requiere un archivo de datos puntuales.';
-     $('rainBars').innerHTML='<div class="empty">El ráster espacial está cargado. La tabla por estación se completará cuando se publiquen también los valores puntuales de precipitación.</div>';
-     makeChart('rainChart',[],[{label:'ECMWF',data:[],borderColor:'#238dcc'}],'Precipitación');
-     return;
-   }
- }
  $('rainMapLabel').textContent=`${model} · ${product==='interval'?'intervalo 3 h':product==='acc24'?'acumulada 24 h':'acumulada 72 h'} · +${h} h`;
  const rows=app.rain?(app.rain.pronostico||app.rain.data||[]):[];
  const field=product==='interval'?'precipitacion_mm':product==='acc24'?'acumulado_24h_mm':'acumulado_72h_mm';
@@ -251,8 +296,8 @@ function updateRain(){
  $('rainBars').innerHTML=`<table><thead><tr><th>Estación</th><th>Precipitación</th><th>Valor</th></tr></thead><tbody>${vals.map(v=>`<tr><td>${v.name}</td><td><div style="height:9px;width:90px;background:#eaf1f5;border-radius:5px"><div style="height:9px;width:${v.value===null?0:v.value/max*90}px;background:#238dcc;border-radius:5px"></div></div></td><td>${v.value===null?'—':num(v.value)+' mm'}</td></tr>`).join('')}</tbody></table>`;
  const series=rows.filter(r=>Number.isFinite(Number(r[field])));
  makeChart('rainChart',series.map(r=>r.fecha||`+${r.horizonte_h} h`),[{label:model,data:series.map(r=>Number(r[field])),borderColor:'#238dcc',backgroundColor:'#238dcc22',fill:true,pointRadius:2,tension:.2}],'Precipitación (mm)');
- $('rainChartNote').textContent=app.rain?(series.length?'Serie cargada desde el archivo publicado.':'El archivo no contiene la variable esperada.'):`Sin archivo data/pronostico_${model}.json. No se muestran datos reales.`;
- $('rainStationNote').textContent=app.rain?'Los valores se leen del archivo publicado.':'Sin datos numéricos cargados.';
+ $('rainChartNote').textContent=app.rain?(series.length?'Serie cargada desde el archivo publicado.':'El catálogo ECMWF contiene GeoTIFF espaciales; no necesariamente incluye serie por estación.'):`Sin archivo data/pronostico_${model}.json.`;
+ $('rainStationNote').textContent=series.length?'Los valores se leen del archivo numérico publicado.':'El GeoTIFF entrega valores por píxel en el mapa; la tabla por estación requiere un archivo de series de estaciones.';
 }
 async function loadFlow(){app.flow=await tryJson(['data/pronostico_caudal.json']);updateFlow()}
 function updateFlow(){
@@ -311,7 +356,7 @@ async function loadImpacts(){
 function refreshLayers(){
  document.querySelectorAll('#impactLayers input').forEach(c=>{const l=app.layers[c.value];if(!l)return;if(c.checked&&!app.maps.impact.hasLayer(l))l.addTo(app.maps.impact);if(!c.checked&&app.maps.impact.hasLayer(l))app.maps.impact.removeLayer(l)});
 }
-$('rainModel').onchange=loadRain;['rainProduct','rainTime','rainStation'].forEach(id=>$(id).onchange=updateRain);$('reloadRain').onclick=loadRain;
+$('rainModel').onchange=loadRain;['rainProduct','rainStation'].forEach(id=>$(id).onchange=updateRain);$('rainTime').onchange=()=>{updateRain();loadEcmwfRaster()};$('reloadRain').onclick=loadRain;
 $('reloadFlow').onclick=loadFlow;$('applyThresholds').onclick=updateFlow;
 $('floodTime').onchange=loadFlood;$('floodScenario').onchange=loadFlood;$('loadFlood').onclick=loadFlood;
 $('floodOpacity').oninput=()=>{if(app.floodLayer)app.floodLayer.setStyle({fillOpacity:Number($('floodOpacity').value)/100})};
@@ -322,6 +367,8 @@ document.querySelectorAll('#impactLayers input').forEach(c=>c.onchange=refreshLa
 createTimes();
 app.maps.rain=makeMap('rainMap',9);app.maps.flood=makeMap('floodMap',12);app.maps.impact=makeMap('impactMap',12);
 app.maps.rain.setView([-3.65,-80.45],9);app.maps.flood.setView(CENTER,12);app.maps.impact.setView(CENTER,12);
+app.maps.rain.on('mousemove',e=>{const v=pixelRainAt(e.latlng);$('rainPixelValue').textContent=v===null?'Píxel: sin dato o fuera del raster.':`Precipitación ECMWF en el píxel: ${num(v)} mm · Lat ${e.latlng.lat.toFixed(5)} · Lon ${e.latlng.lng.toFixed(5)}`});
+app.maps.rain.on('mouseout',()=>{$('rainPixelValue').textContent='Mueve el cursor sobre el raster para consultar la precipitación del píxel.'});
 makeChart('rainChart',[],[{label:'Precipitación',data:[],borderColor:'#238dcc'}],'Precipitación (mm)');
 makeChart('flowChart',[],[
  {label:'Observado',data:[],borderColor:'#526a78'},
