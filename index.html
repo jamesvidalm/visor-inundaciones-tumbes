@@ -1,900 +1,320 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#082b43">
-<meta name="description" content="HidroTumbes: sistema de pronóstico hidrológico, precipitación e inundaciones para la cuenca del río Tumbes.">
 <title>HidroTumbes | Pronóstico Hidrológico</title>
-
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
-:root {
-  --navy: #082b43;
-  --navy2: #0c3d55;
-  --cyan: #20d4c3;
-  --blue: #2196c9;
-  --text: #17364a;
-  --muted: #6c8290;
-  --bg: #f3f7f9;
-  --white: #fff;
-  --border: #dfe8ed;
-}
-
-* { box-sizing: border-box; }
-
-html { scroll-behavior: smooth; }
-
-body {
-  margin: 0;
-  font-family: Inter, "Segoe UI", Arial, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-}
-
-a { color: inherit; text-decoration: none; }
-
-button { font: inherit; }
-
-.header {
-  position: relative;
-  z-index: 10;
-  background: var(--navy);
-  color: white;
-  border-bottom: 1px solid rgba(255,255,255,.15);
-}
-
-.navbar {
-  min-height: 76px;
-  max-width: 1500px;
-  padding: 0 34px;
-  margin: auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 25px;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-}
-
-.brand-logo {
-  width: 46px;
-  height: 46px;
-  border: 1px solid rgba(32,212,195,.65);
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  color: var(--cyan);
-  font-weight: 850;
-  font-size: 20px;
-  letter-spacing: -2px;
-}
-
-.brand-name {
-  font-size: 19px;
-  font-weight: 800;
-  letter-spacing: 1px;
-}
-
-.brand-subtitle {
-  margin-top: 4px;
-  font-size: 11px;
-  color: #c6dce7;
-}
-
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.nav-links a {
-  padding: 12px 15px;
-  border-radius: 8px;
-  color: #e2edf3;
-  font-size: 13px;
-  transition: .2s;
-}
-
-.nav-links a:hover,
-.nav-links a.active {
-  background: #1479a4;
-  color: white;
-}
-
-.nav-toggle {
-  display: none;
-  color: white;
-  background: transparent;
-  border: 1px solid #416174;
-  border-radius: 8px;
-  padding: 8px 12px;
-  cursor: pointer;
-}
-
-.hero {
-  position: relative;
-  min-height: 570px;
-  display: flex;
-  align-items: center;
-  color: white;
-  overflow: hidden;
-  background-color: #153f50;
-  background-image:
-    linear-gradient(90deg,
-      rgba(4,25,39,.94) 0%,
-      rgba(4,25,39,.79) 43%,
-      rgba(4,25,39,.20) 100%),
-    linear-gradient(0deg, rgba(4,25,39,.48), transparent 50%),
-    url("https://portal.andina.pe/EDPfotografia3/Thumbnail/2023/03/10/000939957W.jpg");
-  background-size: cover;
-  background-position: center 48%;
-}
-
-.hero-inner {
-  width: 100%;
-  max-width: 1500px;
-  padding: 60px 5.2% 120px;
-  margin: auto;
-}
-
-.hero-content { max-width: 790px; }
-
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 8px 12px;
-  border: 1px solid rgba(32,212,195,.5);
-  border-radius: 5px;
-  background: rgba(7,43,61,.5);
-  color: #a9fff5;
-  text-transform: uppercase;
-  letter-spacing: 1.7px;
-  font-size: 10px;
-  font-weight: 750;
-}
-
-.eyebrow-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--cyan);
-}
-
-.hero h1 {
-  max-width: 800px;
-  margin: 25px 0 20px;
-  font-size: clamp(34px, 4.5vw, 61px);
-  line-height: 1.11;
-  letter-spacing: -1.8px;
-}
-
-.hero h1 span { color: #50e7dc; }
-
-.hero-description {
-  max-width: 650px;
-  color: #e0edf2;
-  font-size: 16px;
-  line-height: 1.8;
-  margin: 0 0 28px;
-}
-
-.hero-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.btn-primary,
-.btn-outline {
-  min-height: 47px;
-  padding: 13px 20px;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-  border-radius: 7px;
-  font-size: 13px;
-  font-weight: 750;
-  transition: .2s;
-}
-
-.btn-primary {
-  background: var(--cyan);
-  color: #062e3c;
-  border: 1px solid var(--cyan);
-}
-
-.btn-primary:hover {
-  background: #7df3e9;
-  transform: translateY(-2px);
-}
-
-.btn-outline {
-  color: white;
-  background: rgba(255,255,255,.07);
-  border: 1px solid rgba(255,255,255,.55);
-}
-
-.btn-outline:hover { background: rgba(255,255,255,.16); }
-
-.hero-caption {
-  position: absolute;
-  right: 25px;
-  bottom: 102px;
-  font-size: 10px;
-  color: #edf7f8;
-  text-shadow: 0 1px 5px #000;
-}
-
-.hero-caption a { text-decoration: underline; }
-
-.module-strip {
-  position: relative;
-  z-index: 2;
-  max-width: 1320px;
-  margin: -76px auto 0;
-  padding: 0 24px;
-}
-
-.module-panel {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0,1fr));
-  background: rgba(5,29,43,.94);
-  border: 1px solid rgba(255,255,255,.13);
-  border-radius: 13px;
-  overflow: hidden;
-  box-shadow: 0 16px 45px rgba(5,35,49,.2);
-  backdrop-filter: blur(12px);
-}
-
-.module {
-  position: relative;
-  min-height: 158px;
-  padding: 24px 16px;
-  text-align: center;
-  color: white;
-  transition: .2s;
-}
-
-.module:not(:last-child)::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  top: 22px;
-  bottom: 22px;
-  width: 1px;
-  background: rgba(255,255,255,.15);
-}
-
-.module:hover { background: rgba(32,212,195,.1); }
-
-.module-icon {
-  height: 43px;
-  margin-bottom: 12px;
-  color: var(--cyan);
-}
-
-.module-icon svg {
-  height: 37px;
-  width: 37px;
-  stroke: currentColor;
-  stroke-width: 1.6;
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.module h3 {
-  margin: 0 0 9px;
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.module p {
-  margin: 0;
-  color: #bed1dc;
-  font-size: 11px;
-  line-height: 1.65;
-}
-
-.section {
-  max-width: 1320px;
-  padding: 75px 24px;
-  margin: auto;
-}
-
-.section-heading {
-  max-width: 750px;
-  margin-bottom: 30px;
-}
-
-.section-kicker {
-  color: #078f98;
-  font-size: 10px;
-  font-weight: 850;
-  letter-spacing: 1.7px;
-  text-transform: uppercase;
-}
-
-.section-heading h2 {
-  margin: 12px 0;
-  font-size: clamp(25px, 3vw, 35px);
-  letter-spacing: -.8px;
-}
-
-.section-heading p {
-  color: var(--muted);
-  line-height: 1.8;
-  font-size: 14px;
-}
-
-.about-grid {
-  display: grid;
-  grid-template-columns: 1.05fr .95fr;
-  gap: 32px;
-  align-items: stretch;
-}
-
-.about-copy {
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 30px;
-}
-
-.about-copy h3 {
-  margin: 0 0 14px;
-  font-size: 20px;
-}
-
-.about-copy p {
-  color: var(--muted);
-  line-height: 1.85;
-  font-size: 13px;
-}
-
-.capability-list {
-  display: grid;
-  gap: 13px;
-  margin-top: 24px;
-}
-
-.capability {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.capability-mark {
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  background: #e3f8f5;
-  color: #087f8c;
-  border-radius: 7px;
-  font-weight: 800;
-}
-
-.capability strong {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 13px;
-}
-
-.capability span {
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.65;
-}
-
-.method-card {
-  color: white;
-  background: linear-gradient(145deg, #0a4058, #082b43);
-  border-radius: 12px;
-  padding: 30px;
-}
-
-.method-card h3 {
-  margin: 0 0 12px;
-  font-size: 21px;
-}
-
-.method-card > p {
-  color: #c1d7e1;
-  font-size: 13px;
-  line-height: 1.8;
-}
-
-.method-step {
-  display: flex;
-  gap: 14px;
-  padding: 18px 0;
-  border-bottom: 1px solid rgba(255,255,255,.13);
-}
-
-.method-step:last-child { border-bottom: 0; }
-
-.step-number {
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  color: var(--cyan);
-  border: 1px solid rgba(32,212,195,.5);
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.method-step strong {
-  display: block;
-  font-size: 13px;
-  margin: 1px 0 6px;
-}
-
-.method-step p {
-  margin: 0;
-  color: #c1d7e1;
-  font-size: 12px;
-  line-height: 1.7;
-}
-
-.tech-section {
-  background: #eaf1f4;
-  border-top: 1px solid #dce6eb;
-  border-bottom: 1px solid #dce6eb;
-}
-
-.tech-inner {
-  max-width: 1320px;
-  margin: auto;
-  padding: 42px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 35px;
-}
-
-.tech-copy h2 {
-  margin: 0 0 9px;
-  font-size: 21px;
-}
-
-.tech-copy p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.7;
-}
-
-.tech-tags {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 9px;
-}
-
-.tech-tag {
-  padding: 10px 13px;
-  background: white;
-  border: 1px solid #d7e4e9;
-  border-radius: 6px;
-  color: #31586b;
-  font-size: 11px;
-  font-weight: 750;
-}
-
-.bottom-cta {
-  max-width: 1320px;
-  padding: 48px 24px 65px;
-  margin: auto;
-}
-
-.cta-inner {
-  padding: 30px 35px;
-  border-radius: 12px;
-  background: white;
-  border: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 25px;
-}
-
-.cta-inner h2 {
-  margin: 0 0 9px;
-  font-size: 22px;
-}
-
-.cta-inner p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.7;
-}
-
-.footer {
-  background: #061f30;
-  color: #d4e2e9;
-  padding: 28px 24px;
-}
-
-.footer-inner {
-  max-width: 1320px;
-  margin: auto;
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-  font-size: 11px;
-  line-height: 1.7;
-}
-
-.footer strong { color: white; }
-
-@media(max-width: 1000px) {
-  .navbar { padding: 0 20px; }
-  .nav-links a { padding: 11px 9px; font-size: 12px; }
-  .module { padding: 22px 9px; }
-  .module h3 { font-size: 12px; }
-  .about-grid { gap: 18px; }
-}
-
-@media(max-width: 760px) {
-  .navbar { min-height: 68px; }
-  .nav-toggle { display: block; }
-  .nav-links {
-    display: none;
-    position: absolute;
-    top: 68px;
-    left: 0;
-    right: 0;
-    padding: 12px;
-    background: var(--navy);
-    border-top: 1px solid rgba(255,255,255,.12);
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .nav-links.open { display: flex; }
-  .nav-links a { padding: 13px; }
-  .hero { min-height: 560px; background-position: center; }
-  .hero-inner { padding: 45px 22px 110px; }
-  .hero h1 { font-size: 36px; letter-spacing: -1px; }
-  .hero-description { font-size: 14px; }
-  .hero-caption { bottom: 85px; right: 12px; }
-  .module-strip { margin-top: -55px; padding: 0 13px; }
-  .module-panel { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  .module { min-height: 145px; padding: 20px 10px; }
-  .module:last-child { grid-column: 1 / -1; }
-  .module:not(:last-child)::after { display: none; }
-  .module { border-bottom: 1px solid rgba(255,255,255,.1); }
-  .section { padding: 50px 15px; }
-  .about-grid { grid-template-columns: 1fr; }
-  .about-copy, .method-card { padding: 23px; }
-  .tech-inner { padding: 32px 18px; align-items: flex-start; flex-direction: column; }
-  .tech-tags { justify-content: flex-start; }
-  .bottom-cta { padding: 35px 15px 45px; }
-  .cta-inner { padding: 24px; align-items: flex-start; flex-direction: column; }
-}
-
-@media(prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  * { transition: none !important; }
-}
+:root{--navy:#082b43;--navy2:#0c4058;--cyan:#20d4c3;--blue:#238dcc;--bg:#f2f7f9;--text:#17364a;--muted:#708692;--border:#dce7ec;--red:#d94747;--orange:#ed8d31;--yellow:#e4b33b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px Inter,"Segoe UI",Arial,sans-serif}button,select,input{font:inherit}button,select{cursor:pointer}a{color:inherit;text-decoration:none}
+header{background:var(--navy);color:white;position:sticky;top:0;z-index:1000}.navbar{max-width:1600px;margin:auto;min-height:74px;padding:0 25px;display:flex;align-items:center;justify-content:space-between;gap:18px}.brand{display:flex;align-items:center;gap:10px;color:white;flex-shrink:0}.logo{width:43px;height:43px;border:1px solid var(--cyan);border-radius:50%;display:grid;place-items:center;color:var(--cyan);font-weight:900}.brand strong{display:block;letter-spacing:1px;font-size:18px}.brand small{display:block;color:#c6dce7;margin-top:4px;font-size:11px}.nav{display:flex;gap:4px;flex-wrap:wrap}.nav button{border:0;background:transparent;color:#e0edf3;padding:11px 12px;border-radius:7px;font-size:12px}.nav button.active,.nav button:hover{background:#167ba5;color:white}.menu{display:none;background:transparent;color:white;border:1px solid #607a8b;border-radius:6px;padding:9px}
+main{max-width:1600px;margin:auto;padding:22px 25px 35px}.page{display:none}.page.active{display:block}.pagehead{display:flex;justify-content:space-between;align-items:flex-start;gap:15px;margin:2px 0 20px}.pagehead h1{font-size:25px;margin:0 0 8px}.pagehead p{color:var(--muted);line-height:1.6;margin:0;max-width:900px}.eyebrow{font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#078b92;margin-bottom:9px}.btn{border:0;border-radius:7px;background:var(--cyan);color:#062e3c;padding:11px 15px;font-weight:750}.btn.alt{background:white;border:1px solid var(--border);color:var(--text)}
+.card{background:white;border:1px solid var(--border);border-radius:12px;padding:17px;box-shadow:0 5px 20px #183b4b08;min-width:0}.card h3,.card h4{margin:0;font-size:14px}.cardhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}.muted{color:var(--muted);font-size:11px}.grid{display:grid;gap:16px}.cols2{grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr)}.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}.controls{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:14px}.field{display:flex;flex-direction:column;gap:6px;min-width:130px}.field label{font-size:11px;color:var(--muted);font-weight:750}.field select,.field input{border:1px solid var(--border);border-radius:7px;background:white;padding:10px;color:var(--text);min-height:38px}.map{width:100%;height:470px;background:#e1eaed;border-radius:8px;z-index:1}.map.tall{height:550px}.chart{height:290px;position:relative}.chart.large{height:370px}.metricgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}.metric{padding:16px;border:1px solid var(--border);background:white;border-radius:10px}.metric label{display:block;color:var(--muted);font-size:11px}.metric strong{display:block;font-size:25px;margin:10px 0 5px}.metric small{color:var(--muted);font-size:10px;line-height:1.5}.legend{display:flex;gap:13px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:12px}.key{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:5px}.notice{padding:12px 14px;border:1px solid #f0ddb1;background:#fff8e9;color:#81621d;border-radius:8px;line-height:1.6;font-size:12px;margin-bottom:14px}.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:10px 8px;text-align:left;border-bottom:1px solid #e7eef0;white-space:nowrap}th{color:var(--muted);background:#f7fafb}td{color:#36535d}.badge{display:inline-block;padding:5px 8px;border-radius:12px;font-size:10px;font-weight:800}.bgreen{background:#e5f5ec;color:#26784c}.byellow{background:#fff3d2;color:#8a6819}.borange{background:#fff0df;color:#a85a19}.bred{background:#fde8e8;color:#b43232}.bnone{background:#eef2f4;color:#647983}
+.homehero{min-height:500px;display:flex;align-items:center;color:white;border-radius:14px;overflow:hidden;background-color:#0b3a50;background-image:linear-gradient(90deg,rgba(3,25,39,.94),rgba(3,25,39,.69) 48%,rgba(3,25,39,.12)),linear-gradient(0deg,rgba(3,25,39,.3),transparent),url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1800&q=85");background-size:cover;background-position:center}.homecontent{max-width:850px;padding:52px}.homecontent h1{font-size:clamp(34px,4.4vw,59px);line-height:1.12;letter-spacing:-1px;margin:22px 0}.homecontent h1 span{color:#50e7dc}.homecontent p{color:#e0edf2;max-width:650px;line-height:1.8;font-size:15px}.homeactions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.btnline{padding:12px 17px;border:1px solid #b8d5df;background:#ffffff12;color:white;border-radius:7px;font-weight:700}.modules{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin-top:16px;background:#082b43;border-radius:12px;overflow:hidden}.module{padding:22px 12px;color:white;text-align:center;border-right:1px solid #ffffff20}.module:last-child{border:0}.module:hover{background:#10475a}.module .num{color:var(--cyan);font-size:22px;font-weight:800;margin-bottom:12px}.module strong{display:block;font-size:12px;margin-bottom:8px}.module p{font-size:11px;color:#c6dce7;line-height:1.6;margin:0}.homebelow{margin-top:34px}.homebelow h2{font-size:25px;margin:0 0 10px}.homebelow>p{color:var(--muted);line-height:1.8;max-width:900px}.feature{padding:21px}.feature .n{font-size:11px;color:#078b92;font-weight:800}.feature h3{margin:10px 0}.feature p{color:var(--muted);font-size:12px;line-height:1.7}.layerlist{display:grid;gap:10px}.layerlist label{display:flex;gap:9px;align-items:center;font-size:12px;color:#385662}.layerlist input{accent-color:#087f8c;width:16px;height:16px}.legendbox{background:#082b43;color:white;border-radius:8px;padding:15px;line-height:1.8;font-size:11px}.empty{background:#f7fafb;border:1px dashed #cddde1;border-radius:8px;padding:13px;color:var(--muted);font-size:11px;line-height:1.6;margin-top:12px}.footer{border-top:1px solid var(--border);padding:20px 25px;color:var(--muted);font-size:11px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+@media(max-width:1100px){.navbar{padding:0 15px}.nav button{padding:9px 7px;font-size:11px}main{padding:17px}.cols2{grid-template-columns:1fr}.metricgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.modules{grid-template-columns:repeat(3,1fr)}.module:nth-child(3){border-right:0}.module:nth-child(4),.module:nth-child(5){border-top:1px solid #ffffff20}}
+@media(max-width:760px){.navbar{flex-wrap:wrap;padding:12px 15px}.menu{display:block}.nav{display:none;order:3;width:100%;flex-direction:column;padding-bottom:8px}.nav.open{display:flex}.nav button{text-align:left;padding:12px}.homehero{min-height:500px}.homecontent{padding:26px 22px}.homecontent h1{font-size:36px}.modules{grid-template-columns:repeat(2,1fr)}.module:nth-child(2n){border-right:0}.module:last-child{grid-column:1/-1}.metricgrid{gap:8px}.metric strong{font-size:21px}.pagehead{flex-direction:column}.map{height:360px}.map.tall{height:420px}.chart.large{height:330px}.cols3{grid-template-columns:1fr}}
 </style>
 </head>
-
 <body>
-
-<header class="header">
-  <div class="navbar">
-    <a class="brand" href="#inicio" aria-label="HidroTumbes, inicio">
-      <div class="brand-logo">HT</div>
-      <div>
-        <div class="brand-name">TUMBES</div>
-        <div class="brand-subtitle">Pronóstico Hidrológico</div>
-      </div>
-    </a>
-
-    <button class="nav-toggle" id="navToggle" aria-label="Abrir menú" aria-expanded="false">
-      Menú
-    </button>
-
-    <nav class="nav-links" id="navLinks">
-      <a class="active" href="#inicio">Inicio</a>
-      <a href="#productos">Pronóstico</a>
-      <a href="#productos">Mapas</a>
-      <a href="#metodologia">Estaciones</a>
-      <a href="#metodologia">Datos</a>
-      <a href="#metodologia">Análisis</a>
-    </nav>
-  </div>
+<header>
+ <div class="navbar">
+  <a class="brand" href="#" data-gopage="inicio"><div class="logo">HT</div><div><strong>TUMBES</strong><small>Pronóstico Hidrológico</small></div></a>
+  <button class="menu" id="menuBtn">Menú</button>
+  <nav class="nav" id="nav">
+   <button class="active" data-page="inicio">Inicio</button>
+   <button data-page="precipitacion">Pronóstico de precipitación</button>
+   <button data-page="caudal">Pronóstico de caudales</button>
+   <button data-page="inundacion">Zonas de inundación</button>
+   <button data-page="impactos">Impactos</button>
+  </nav>
+ </div>
 </header>
 
 <main>
-  <!-- PORTADA PRINCIPAL -->
-  <section class="hero" id="inicio">
-    <div class="hero-inner">
-      <div class="hero-content">
-        <div class="eyebrow">
-          <span class="eyebrow-dot"></span>
-          Plataforma de monitoreo hidrológico
-        </div>
-
-        <h1>
-          Sistema de Pronóstico<br>
-          Hidrológico – <span>Cuenca del Río Tumbes</span>
-        </h1>
-
-        <p class="hero-description">
-          Integración de datos satelitales, información meteorológica y modelos
-          de inteligencia artificial para el pronóstico de precipitación,
-          la estimación de caudales y la evaluación del riesgo de inundaciones.
-        </p>
-
-        <div class="hero-actions">
-          <a class="btn-primary" href="#productos">
-            Explorar la plataforma <span aria-hidden="true">→</span>
-          </a>
-          <a class="btn-outline" href="#metodologia">
-            Conocer el sistema
-          </a>
-        </div>
-      </div>
-    </div>
-
-    <div class="hero-caption">
-      Imagen del río Tumbes ·
-      <a href="https://andina.pe/agencia/noticia-tumbes-alerta-ante-posibles-desbordes-por-aumento-del-caudal-del-rio-lluvias-935362.aspx"
-         target="_blank" rel="noopener noreferrer">Fuente: Agencia Andina</a>
-    </div>
-  </section>
-
-  <!-- ACCESOS A LOS MÓDULOS -->
-  <section class="module-strip" id="productos" aria-label="Módulos de la plataforma">
-    <div class="module-panel">
-
-      <a class="module" href="#metodologia">
-        <div class="module-icon">
-          <svg viewBox="0 0 40 40">
-            <path d="M10 25a8 8 0 0 1-1-16 12 12 0 0 1 23 4 7 7 0 0 1-1 14H10"/>
-            <path d="m14 31-2 4m11-4-2 4m11-4-2 4"/>
-          </svg>
-        </div>
-        <h3>Pronóstico meteorológico</h3>
-        <p>ECMWF / GFS<br>Pronóstico de lluvia</p>
-      </a>
-
-      <a class="module" href="#metodologia">
-        <div class="module-icon">
-          <svg viewBox="0 0 40 40">
-            <path d="M3 13c4-7 8 7 13 0s9 7 14 0 6-2 7-1"/>
-            <path d="M3 22c4-7 8 7 13 0s9 7 14 0 6-2 7-1"/>
-            <path d="M3 31c4-7 8 7 13 0s9 7 14 0 6-2 7-1"/>
-          </svg>
-        </div>
-        <h3>Pronóstico de caudales</h3>
-        <p>Modelos hidrológicos<br>Horizontes configurables</p>
-      </a>
-
-      <a class="module" href="#metodologia">
-        <div class="module-icon">
-          <svg viewBox="0 0 40 40">
-            <path d="M4 9 15 4l11 5 10-5v27l-10 5-11-5-11 5Z"/>
-            <path d="M15 4v27M26 9v27"/>
-          </svg>
-        </div>
-        <h3>Mapas interactivos</h3>
-        <p>Cuenca, inundación<br>y zonas expuestas</p>
-      </a>
-
-      <a class="module" href="#metodologia">
-        <div class="module-icon">
-          <svg viewBox="0 0 40 40">
-            <path d="M17 26 7 36m13-13 4 4"/>
-            <path d="M12 8a15 15 0 0 1 20 20L12 8Z"/>
-            <path d="m8 5 5 5M4 12l5 1m18 19 5 1"/>
-            <path d="M20 17 7 30a4 4 0 0 0 6 6l13-13"/>
-          </svg>
-        </div>
-        <h3>Datos satelitales</h3>
-        <p>IMERG, PISCO<br>y productos meteorológicos</p>
-      </a>
-
-      <a class="module" href="#metodologia">
-        <div class="module-icon">
-          <svg viewBox="0 0 40 40">
-            <path d="M5 34V22h8v12ZM17 34V12h8v22ZM29 34V5h7v29Z"/>
-          </svg>
-        </div>
-        <h3>Estaciones hidrológicas</h3>
-        <p>Lluvia, caudal<br>y monitoreo de niveles</p>
-      </a>
-
-    </div>
-  </section>
-
-  <!-- DESCRIPCIÓN INSTITUCIONAL -->
-  <section class="section" id="metodologia">
-    <div class="section-heading">
-      <div class="section-kicker">Sobre la plataforma</div>
-      <h2>Información hidrológica para anticipar riesgos</h2>
-      <p>
-        HidroTumbes está concebido como una herramienta de apoyo al análisis
-        hidrometeorológico de la cuenca del río Tumbes. Su objetivo es reunir
-        pronósticos, información geoespacial y resultados de modelos en una
-        interfaz accesible para el seguimiento de posibles crecidas e inundaciones.
-      </p>
-    </div>
-
-    <div class="about-grid">
-      <article class="about-copy">
-        <h3>¿Qué permite hacer el sistema?</h3>
-        <p>
-          La plataforma organizará los principales productos de monitoreo y
-          pronóstico para facilitar su consulta y apoyar la evaluación técnica
-          de escenarios hidrológicos.
-        </p>
-
-        <div class="capability-list">
-          <div class="capability">
-            <div class="capability-mark">01</div>
-            <div>
-              <strong>Pronóstico de precipitación</strong>
-              <span>Consulta de productos meteorológicos y acumulados de lluvia previstos.</span>
-            </div>
-          </div>
-
-          <div class="capability">
-            <div class="capability-mark">02</div>
-            <div>
-              <strong>Modelamiento hidrológico</strong>
-              <span>Estimación de la evolución del caudal y visualización de hidrogramas.</span>
-            </div>
-          </div>
-
-          <div class="capability">
-            <div class="capability-mark">03</div>
-            <div>
-              <strong>Evaluación de inundaciones</strong>
-              <span>Exploración de escenarios hidráulicos y extensión espacial de las manchas.</span>
-            </div>
-          </div>
-
-          <div class="capability">
-            <div class="capability-mark">04</div>
-            <div>
-              <strong>Análisis de elementos expuestos</strong>
-              <span>Integración de capas de población, edificaciones, cultivos e infraestructura.</span>
-            </div>
-          </div>
-        </div>
-      </article>
-
-      <article class="method-card">
-        <h3>Flujo de trabajo técnico</h3>
-        <p>
-          La arquitectura del sistema está diseñada para integrar datos de entrada,
-          procesamiento de modelos y productos cartográficos.
-        </p>
-
-        <div class="method-step">
-          <div class="step-number">01</div>
-          <div>
-            <strong>Datos de entrada</strong>
-            <p>Pronósticos meteorológicos, precipitaciones observadas y registros hidrológicos.</p>
-          </div>
-        </div>
-
-        <div class="method-step">
-          <div class="step-number">02</div>
-          <div>
-            <strong>Procesamiento y modelamiento</strong>
-            <p>Preparación de variables, modelos hidrológicos y simulaciones hidráulicas.</p>
-          </div>
-        </div>
-
-        <div class="method-step">
-          <div class="step-number">03</div>
-          <div>
-            <strong>Productos geoespaciales</strong>
-            <p>Series temporales, mapas de escenarios de inundación y capas de exposición.</p>
-          </div>
-        </div>
-
-        <div class="method-step">
-          <div class="step-number">04</div>
-          <div>
-            <strong>Publicación y consulta</strong>
-            <p>Visualización de resultados procesados en una interfaz web interactiva.</p>
-          </div>
-        </div>
-      </article>
-    </div>
-  </section>
-
-  <!-- TECNOLOGÍAS -->
-  <section class="tech-section">
-    <div class="tech-inner">
-      <div class="tech-copy">
-        <h2>Arquitectura geoespacial</h2>
-        <p>
-          Una plataforma preparada para integrar modelos, datos hidrológicos
-          y productos cartográficos publicados.
-        </p>
-      </div>
-
-      <div class="tech-tags">
-        <span class="tech-tag">GFS / ECMWF</span>
-        <span class="tech-tag">IMERG / PISCO</span>
-        <span class="tech-tag">Modelos de IA</span>
-        <span class="tech-tag">GeoJSON</span>
-        <span class="tech-tag">GIS</span>
-        <span class="tech-tag">GitHub Pages</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- LLAMADA A LA ACCIÓN -->
-  <section class="bottom-cta">
-    <div class="cta-inner">
-      <div>
-        <h2>Explora los productos hidrológicos</h2>
-        <p>
-          Accede a los módulos de la plataforma y consulta los productos
-          disponibles para la cuenca del río Tumbes.
-        </p>
-      </div>
-      <a class="btn-primary" href="#productos">Ver módulos →</a>
-    </div>
-  </section>
-</main>
-
-<footer class="footer">
-  <div class="footer-inner">
-    <div>
-      <strong>HidroTumbes · Pronóstico Hidrológico</strong><br>
-      Sistema de información para la cuenca del río Tumbes, Perú.
-    </div>
-    <div>
-      Plataforma en desarrollo.<br>
-      Los pronósticos y análisis deberán validarse antes de su uso operativo.
-    </div>
+<section class="page active" id="page-inicio">
+ <div class="homehero"><div class="homecontent">
+  <div class="eyebrow" style="color:#a9fff5">Sistema de monitoreo y pronóstico</div>
+  <h1>Sistema de Pronóstico Hidrológico – <span>Cuenca del Río Tumbes</span></h1>
+  <p>Integración de pronósticos meteorológicos, datos satelitales y modelos hidrológicos para anticipar crecidas, explorar escenarios de inundación y evaluar posibles impactos.</p>
+  <div class="homeactions"><button class="btn" data-gopage="precipitacion">Explorar pronósticos →</button><button class="btnline" data-gopage="inundacion">Explorar mapas</button></div>
+ </div></div>
+ <div class="modules">
+  <a class="module" href="#" data-gopage="precipitacion"><div class="num">01</div><strong>Pronóstico meteorológico</strong><p>GFS y ECMWF<br>Intervalos de 3 horas · 72 h</p></a>
+  <a class="module" href="#" data-gopage="caudal"><div class="num">02</div><strong>Pronóstico de caudales</strong><p>GFS, ECMWF y promedio<br>Hidrograma y umbrales</p></a>
+  <a class="module" href="#" data-gopage="inundacion"><div class="num">03</div><strong>Mapas de inundación</strong><p>Escenarios por hora<br>según el pronóstico</p></a>
+  <a class="module" href="#" data-gopage="precipitacion"><div class="num">04</div><strong>Series temporales</strong><p>Precipitación y caudal<br>cada 3 horas</p></a>
+  <a class="module" href="#" data-gopage="impactos"><div class="num">05</div><strong>Impactos potenciales</strong><p>Viviendas, vías, cultivos<br>y servicios esenciales</p></a>
+ </div>
+ <div class="homebelow"><div class="eyebrow">Cómo funciona</div><h2>Del pronóstico meteorológico a los posibles impactos</h2><p>La plataforma organiza la cadena de análisis desde la lluvia prevista hasta los caudales, las manchas de inundación y los elementos expuestos. Esta primera versión prepara la interfaz para incorporar los archivos reales que se procesarán fuera de GitHub Pages.</p>
+  <div class="grid cols3">
+   <article class="card feature"><div class="n">01 / ENTRADAS</div><h3>Pronóstico meteorológico</h3><p>Consulta de precipitación GFS y ECMWF por periodo, ubicación y acumulación.</p></article>
+   <article class="card feature"><div class="n">02 / HIDROLOGÍA</div><h3>Caudal y alertas</h3><p>Comparación de modelos, promedio de caudales y clasificación frente a umbrales configurables.</p></article>
+   <article class="card feature"><div class="n">03 / CONSECUENCIAS</div><h3>Inundación e impactos</h3><p>Exploración temporal de manchas hidráulicas y elementos expuestos en la cuenca.</p></article>
   </div>
-</footer>
+ </div>
+</section>
+
+<section class="page" id="page-precipitacion">
+ <div class="pagehead"><div><div class="eyebrow">Módulo 02</div><h1>Pronóstico de precipitación</h1><p>Comparación espacial y temporal de GFS y ECMWF. Horizonte de 72 horas, paso de 3 horas.</p></div><button class="btn alt" id="reloadRain">Recargar datos</button></div>
+ <div class="controls">
+  <div class="field"><label>Modelo</label><select id="rainModel"><option>GFS</option><option>ECMWF</option></select></div>
+  <div class="field"><label>Producto</label><select id="rainProduct"><option value="interval">Intervalo de 3 horas</option><option value="acc24">Acumulada 24 horas</option><option value="acc72">Acumulada 72 horas</option></select></div>
+  <div class="field"><label>Hora de pronóstico (Perú)</label><select id="rainTime"></select></div>
+  <div class="field"><label>Estación / punto</label><select id="rainStation"><option>Tumbes</option><option>El Tigre</option><option>Matapalo</option><option>La Cruz</option><option>Corrales</option></select></div>
+ </div>
+ <div class="grid cols2">
+  <div class="card"><div class="cardhead"><h3>Mapa de precipitación</h3><span class="muted" id="rainMapLabel">GFS · intervalo 3 h</span></div><div id="rainMap" class="map"></div><div class="empty">El mapa base es de referencia. El campo de precipitación se agregará al conectar el raster real.</div></div>
+  <div class="grid">
+   <div class="card"><div class="cardhead"><h3>Precipitación por estación</h3><span class="muted">mm</span></div><div id="rainBars" class="tablewrap"></div><div class="empty" id="rainStationNote">Sin datos de precipitación cargados.</div></div>
+   <div class="card"><div class="cardhead"><h3>Serie temporal</h3><span class="muted">Cada 3 horas · 72 h</span></div><div class="chart"><canvas id="rainChart"></canvas></div><div class="empty" id="rainChartNote">Esperando los archivos de pronóstico.</div></div>
+  </div>
+ </div>
+</section>
+
+<section class="page" id="page-caudal">
+ <div class="pagehead"><div><div class="eyebrow">Módulo 03</div><h1>Pronóstico de caudales – Estación El Tigre</h1><p>Caudal observado, pronósticos GFS y ECMWF, promedio y nivel de alerta en intervalos de 3 horas durante 72 horas.</p></div><button class="btn alt" id="reloadFlow">Recargar datos</button></div>
+ <div class="controls">
+  <div class="field"><label>Estación</label><select id="flowStation"><option>El Tigre</option></select></div>
+  <div class="field"><label>Hora inicial (Perú)</label><select id="flowStart"></select></div>
+  <div class="field"><label>Intervalo</label><select disabled><option>Cada 3 horas</option></select></div>
+  <div class="field"><label>Horizonte</label><select disabled><option>72 horas</option></select></div>
+  <div class="field"><label>Umbral amarillo (m³/s)</label><input id="thYellow" type="number" value="75" min="0"></div>
+  <div class="field"><label>Umbral naranja (m³/s)</label><input id="thOrange" type="number" value="90" min="0"></div>
+  <div class="field"><label>Umbral rojo (m³/s)</label><input id="thRed" type="number" value="120" min="0"></div>
+  <button class="btn" id="applyThresholds">Aplicar umbrales</button>
+ </div>
+ <div class="metricgrid">
+  <div class="metric"><label>Último caudal observado</label><strong id="mObserved">—</strong><small>m³/s</small></div>
+  <div class="metric"><label>Máximo GFS</label><strong id="mGfs">—</strong><small>m³/s · 72 h</small></div>
+  <div class="metric"><label>Máximo ECMWF</label><strong id="mEcmwf">—</strong><small>m³/s · 72 h</small></div>
+  <div class="metric"><label>Máximo promedio</label><strong id="mMean">—</strong><small>m³/s · Media de ambos modelos</small></div>
+ </div>
+ <div class="grid cols2">
+  <div class="card"><div class="cardhead"><h3>Hidrograma de caudal</h3><span class="muted">m³/s · paso de 3 h</span></div><div class="chart large"><canvas id="flowChart"></canvas></div>
+   <div class="legend"><span><i class="key" style="background:#526a78"></i>Observado</span><span><i class="key" style="background:#238dcc"></i>Pronóstico GFS</span><span><i class="key" style="background:#df5656"></i>Pronóstico ECMWF</span><span><i class="key" style="background:#20a68a"></i>Promedio</span></div>
+   <div class="empty">Las curvas se dibujarán cuando se carguen los datos reales.</div>
+  </div>
+  <div class="card"><div class="cardhead"><h3>Caudales y umbrales</h3><span class="muted">25 instantes · 0–72 h</span></div><div class="tablewrap" style="max-height:460px;overflow:auto"><table><thead><tr><th>Fecha / hora</th><th>GFS</th><th>ECMWF</th><th>Promedio</th><th>Alerta</th></tr></thead><tbody id="flowTable"></tbody></table></div></div>
+ </div>
+</section>
+
+<section class="page" id="page-inundacion">
+ <div class="pagehead"><div><div class="eyebrow">Módulo 04</div><h1>Zonas de inundación según el pronóstico</h1><p>Selecciona la hora para consultar la mancha hidráulica correspondiente. Horizonte de 72 horas, intervalos de 3 horas.</p></div></div>
+ <div class="notice">Las manchas deben proceder de simulaciones hidráulicas reales. El mapa base no representa una inundación simulada.</div>
+ <div class="controls">
+  <div class="field"><label>Estación</label><select id="floodStation"><option>El Tigre</option></select></div>
+  <div class="field"><label>Fecha / hora</label><select id="floodTime"></select></div>
+  <div class="field"><label>Escenario</label><select id="floodScenario"><option value="mean">Promedio GFS + ECMWF</option><option value="GFS">Caudal GFS</option><option value="ECMWF">Caudal ECMWF</option></select></div>
+  <div class="field"><label>Transparencia</label><input id="floodOpacity" type="range" min="10" max="90" value="55"></div>
+  <button class="btn alt" id="loadFlood">Cargar mancha</button>
+ </div>
+ <div class="grid cols2">
+  <div class="card"><div class="cardhead"><h3>Mapa de extensión de inundación</h3><span id="floodMapLabel" class="muted">Selecciona una hora</span></div><div id="floodMap" class="map tall"></div><div class="legend"><span><i class="key" style="background:#0575ee"></i>Profundidad alta</span><span><i class="key" style="background:#24a7ed"></i>Profundidad media</span><span><i class="key" style="background:#7ad9c6"></i>Profundidad baja</span></div><div id="floodNote" class="empty">No hay mancha cargada.</div></div>
+  <div class="card"><div class="cardhead"><h3>Información del instante</h3></div>
+   <div class="metric"><label>Hora del pronóstico</label><strong id="floodHour">—</strong><small>Hora local de Perú</small></div><br>
+   <div class="metric"><label>Caudal asociado</label><strong id="floodFlow">—</strong><small>m³/s</small></div><br>
+   <div class="metric"><label>Superficie inundada</label><strong id="floodArea">—</strong><small>km² · Por calcular desde la geometría</small></div>
+   <div class="empty">Los valores requieren salidas hidráulicas georreferenciadas.</div>
+  </div>
+ </div>
+</section>
+
+<section class="page" id="page-impactos">
+ <div class="pagehead"><div><div class="eyebrow">Módulo 05</div><h1>Impactos potenciales y elementos expuestos</h1><p>Las capas y los indicadores corresponden a la misma hora y escenario de inundación seleccionados.</p></div></div>
+ <div class="controls">
+  <div class="field"><label>Fecha / hora</label><select id="impactTime"></select></div>
+  <div class="field"><label>Fuente del caudal</label><select id="impactModel"><option value="mean">Promedio GFS + ECMWF</option><option value="GFS">GFS</option><option value="ECMWF">ECMWF</option></select></div>
+  <div class="field"><label>Transparencia</label><input id="impactOpacity" type="range" min="10" max="90" value="55"></div>
+  <button class="btn alt" id="refreshImpact">Actualizar mapa</button>
+ </div>
+ <div class="grid cols2">
+  <div class="card"><div class="cardhead"><h3>Capas de impacto</h3><span class="muted">Activar / desactivar</span></div>
+   <div class="layerlist" id="impactLayers">
+    <label><input type="checkbox" value="viviendas" checked> Viviendas</label>
+    <label><input type="checkbox" value="poblacion" checked> Población</label>
+    <label><input type="checkbox" value="colegios" checked> Centros educativos</label>
+    <label><input type="checkbox" value="salud" checked> Establecimientos de salud</label>
+    <label><input type="checkbox" value="puentes" checked> Puentes</label>
+    <label><input type="checkbox" value="vias" checked> Vías</label>
+    <label><input type="checkbox" value="cultivos" checked> Zonas agrícolas</label>
+    <label><input type="checkbox" value="critica" checked> Infraestructura crítica</label>
+   </div><hr style="border:0;border-top:1px solid var(--border);margin:18px 0">
+   <h3 style="margin-bottom:12px">Leyenda</h3><div class="legendbox">
+    <div><i class="key" style="background:#1587e8"></i>Viviendas y población</div>
+    <div><i class="key" style="background:#e34e58"></i>Educación y salud</div>
+    <div><i class="key" style="background:#24966b"></i>Puentes</div>
+    <div><i class="key" style="background:#f29b38"></i>Vías</div>
+    <div><i class="key" style="background:#a47ad8"></i>Cultivos e infraestructura</div>
+   </div><div class="empty">Las capas reales se cargarán desde GeoJSON por categoría.</div>
+  </div>
+  <div class="card"><div class="cardhead"><h3>Mapa de impactos y mancha</h3><span class="muted" id="impactMapLabel">Hora seleccionada</span></div><div id="impactMap" class="map tall"></div></div>
+ </div>
+ <div class="grid cols3" style="margin-top:16px">
+  <div class="metric"><label>Población expuesta</label><strong id="impactPopulation">—</strong><small>Personas</small></div>
+  <div class="metric"><label>Edificaciones expuestas</label><strong id="impactBuildings">—</strong><small>Unidades</small></div>
+  <div class="metric"><label>Vías / cultivos afectados</label><strong id="impactOther">—</strong><small>Por calcular</small></div>
+ </div>
+</section>
+</main>
+<footer class="footer"><span><strong>HidroTumbes</strong> · Sistema de pronóstico hidrológico</span><span>Prototipo visual · Validar los resultados antes de su uso operativo.</span></footer>
 
 <script>
-const navToggle = document.getElementById("navToggle");
-const navLinks = document.getElementById("navLinks");
+const $=id=>document.getElementById(id);
+const CENTER=[-3.65,-80.45];
+const app={maps:{},charts:{},flow:null,rain:null,layers:{},floodLayer:null,impactFlood:null,times:[]};
 
-navToggle.addEventListener("click", () => {
-  const opened = navLinks.classList.toggle("open");
-  navToggle.setAttribute("aria-expanded", String(opened));
-});
+function switchPage(name){
+ document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+name));
+ document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===name));
+ $('nav').classList.remove('open');
+ setTimeout(()=>Object.values(app.maps).forEach(m=>m.invalidateSize()),100);
+}
+document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>switchPage(b.dataset.page));
+document.querySelectorAll('[data-gopage]').forEach(b=>b.onclick=e=>{e.preventDefault();switchPage(b.dataset.gopage)});
+$('menuBtn').onclick=()=>$('nav').classList.toggle('open');
 
-navLinks.querySelectorAll("a").forEach(link => {
-  link.addEventListener("click", () => {
-    navLinks.classList.remove("open");
-    navToggle.setAttribute("aria-expanded", "false");
+function makeMap(id,zoom=10){
+ const map=L.map(id).setView(CENTER,zoom);
+ const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
+ const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles &copy; Esri'});
+ L.control.layers({'Mapa base':osm,'Imagen satelital':sat}).addTo(map);
+ return map;
+}
+function makeChart(id,labels,datasets,yTitle=''){
+ if(app.charts[id])app.charts[id].destroy();
+ app.charts[id]=new Chart($(id),{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,font:{size:10}}}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:8,maxRotation:0,font:{size:10}}},y:{beginAtZero:true,title:{display:!!yTitle,text:yTitle},grid:{color:'#edf2f3'}}}}});
+}
+function createTimes(){
+ const now=new Date(),peru=new Date(now.getTime()-5*3600000);
+ peru.setUTCMinutes(0,0,0);
+ const start=new Date(peru.getTime()+5*3600000);
+ for(let h=0;h<=72;h+=3)app.times.push({h,date:new Date(start.getTime()+h*3600000)});
+ ['rainTime','flowStart','floodTime','impactTime'].forEach(id=>$(id).innerHTML=app.times.map(t=>`<option value="${t.h}">+${String(t.h).padStart(2,'0')} h · ${fmtDate(t.date)}</option>`).join(''));
+}
+function fmtDate(d){return new Intl.DateTimeFormat('es-PE',{timeZone:'America/Lima',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(d)}
+function num(v){return v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))?Number(v).toLocaleString('es-PE',{maximumFractionDigits:1}):'—'}
+function hourValue(id){return Number($(id).value||0)}
+function threshold(q){
+ const y=Number($('thYellow').value),o=Number($('thOrange').value),r=Number($('thRed').value);
+ if(!Number.isFinite(q))return ['Sin datos','bnone'];
+ if(q>=r)return ['Rojo','bred'];if(q>=o)return ['Naranja','borange'];if(q>=y)return ['Amarillo','byellow'];return ['Bajo umbral','bgreen'];
+}
+async function fetchJson(path){const r=await fetch(path+'?v='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error(path);return r.json()}
+async function tryJson(paths){for(const p of paths){try{return await fetchJson(p)}catch(e){}}return null}
 
-    navLinks.querySelectorAll("a").forEach(item => {
-      item.classList.remove("active");
-    });
-    link.classList.add("active");
-  });
-});
+/*
+ARCHIVOS ESPERADOS PARA LA CONEXIÓN POSTERIOR:
+data/pronostico_gfs.json
+data/pronostico_ecmwf.json
+data/pronostico_caudal.json
+manchas/mean_00h.geojson ... manchas/mean_72h.geojson
+manchas/GFS_00h.geojson y manchas/ECMWF_00h.geojson (mismo patrón temporal)
+impactos/viviendas.geojson, poblacion.geojson, colegios.geojson,
+salud.geojson, puentes.geojson, vias.geojson, cultivos.geojson, critica.geojson
+
+Son nombres previstos, no archivos ni pronósticos que ya existan.
+*/
+
+async function loadRain(){
+ const model=$('rainModel').value.toLowerCase();
+ app.rain=await tryJson([`data/pronostico_${model}.json`]);
+ updateRain();
+}
+function updateRain(){
+ const model=$('rainModel').value,product=$('rainProduct').value,h=hourValue('rainTime');
+ $('rainMapLabel').textContent=`${model} · ${product==='interval'?'intervalo 3 h':product==='acc24'?'acumulada 24 h':'acumulada 72 h'} · +${h} h`;
+ const rows=app.rain?(app.rain.pronostico||app.rain.data||[]):[];
+ const field=product==='interval'?'precipitacion_mm':product==='acc24'?'acumulado_24h_mm':'acumulado_72h_mm';
+ const selected=rows.filter(r=>Number(r.horizonte_h)===h);
+ const names=['Tumbes','El Tigre','Matapalo','La Cruz','Corrales'];
+ const vals=names.map(name=>{const r=selected.find(x=>(x.estacion||'').toLowerCase()===name.toLowerCase());return{name,value:r&&Number.isFinite(Number(r[field]))?Number(r[field]):null}});
+ const max=Math.max(1,...vals.filter(v=>v.value!==null).map(v=>v.value));
+ $('rainBars').innerHTML=`<table><thead><tr><th>Estación</th><th>Precipitación</th><th>Valor</th></tr></thead><tbody>${vals.map(v=>`<tr><td>${v.name}</td><td><div style="height:9px;width:90px;background:#eaf1f5;border-radius:5px"><div style="height:9px;width:${v.value===null?0:v.value/max*90}px;background:#238dcc;border-radius:5px"></div></div></td><td>${v.value===null?'—':num(v.value)+' mm'}</td></tr>`).join('')}</tbody></table>`;
+ const series=rows.filter(r=>Number.isFinite(Number(r[field])));
+ makeChart('rainChart',series.map(r=>r.fecha||`+${r.horizonte_h} h`),[{label:model,data:series.map(r=>Number(r[field])),borderColor:'#238dcc',backgroundColor:'#238dcc22',fill:true,pointRadius:2,tension:.2}],'Precipitación (mm)');
+ $('rainChartNote').textContent=app.rain?(series.length?'Serie cargada desde el archivo publicado.':'El archivo no contiene la variable esperada.'):`Sin archivo data/pronostico_${model}.json. No se muestran datos reales.`;
+ $('rainStationNote').textContent=app.rain?'Los valores se leen del archivo publicado.':'Sin datos numéricos cargados.';
+}
+async function loadFlow(){app.flow=await tryJson(['data/pronostico_caudal.json']);updateFlow()}
+function updateFlow(){
+ const observed=app.flow&&app.flow.observado||[],forecast=app.flow&&app.flow.pronostico||[],rows=[];
+ for(let h=0;h<=72;h+=3){
+  const r=forecast.find(x=>Number(x.horizonte_h)===h);
+  const g=r&&Number.isFinite(Number(r.caudal_gfs_m3s))?Number(r.caudal_gfs_m3s):null;
+  const e=r&&Number.isFinite(Number(r.caudal_ecmwf_m3s))?Number(r.caudal_ecmwf_m3s):null;
+  rows.push({h,row:r,g,e,mean:g!==null&&e!==null?(g+e)/2:null});
+ }
+ const last=observed.length?observed[observed.length-1]:null;
+ $('mObserved').textContent=last?num(last.caudal_m3s):'—';
+ for(const [id,key] of [['mGfs','g'],['mEcmwf','e'],['mMean','mean']]){
+  const a=rows.map(r=>r[key]).filter(v=>v!==null);$(id).textContent=a.length?num(Math.max(...a)):'—';
+ }
+ $('flowTable').innerHTML=rows.map(r=>{
+  const alert=threshold(r.mean),date=r.row&&r.row.fecha?new Date(r.row.fecha):app.times.find(t=>t.h===r.h).date;
+  return `<tr><td>+${String(r.h).padStart(2,'0')} h<br><span class="muted">${fmtDate(date)}</span></td><td>${num(r.g)}</td><td>${num(r.e)}</td><td><strong>${num(r.mean)}</strong></td><td><span class="badge ${alert[1]}">${alert[0]}</span></td></tr>`;
+ }).join('');
+ makeChart('flowChart',rows.map(r=>`+${r.h} h`),[
+  {label:'Observado',data:rows.map(r=>{const o=observed.find(x=>Number(x.horizonte_h)===r.h);return o?Number(o.caudal_m3s):null}),borderColor:'#526a78',pointRadius:2,tension:.2},
+  {label:'Pronóstico GFS',data:rows.map(r=>r.g),borderColor:'#238dcc',pointRadius:2,tension:.2},
+  {label:'Pronóstico ECMWF',data:rows.map(r=>r.e),borderColor:'#df5656',pointRadius:2,tension:.2},
+  {label:'Promedio',data:rows.map(r=>r.mean),borderColor:'#20a68a',borderDash:[5,3],pointRadius:2,tension:.2}
+ ],'Caudal (m³/s)');
+}
+async function loadFlood(){
+ const h=hourValue('floodTime'),model=$('floodScenario').value,t=app.times.find(x=>x.h===h),key=String(h).padStart(2,'0');
+ $('floodMapLabel').textContent=`+${h} h · ${fmtDate(t.date)} · ${model}`;$('floodHour').textContent=`+${h} h · ${fmtDate(t.date)}`;$('floodFlow').textContent='—';$('floodArea').textContent='—';
+ if(app.floodLayer)app.maps.flood.removeLayer(app.floodLayer);app.floodLayer=null;
+ const geo=await tryJson([`manchas/${model}_${key}h.geojson`,`manchas/${model}_H${key}.geojson`,`manchas/H${key}.geojson`]);
+ if(!geo){$('floodNote').textContent=`No se encontró GeoJSON para +${h} h. Archivo esperado: manchas/${model}_${key}h.geojson. El mapa base no es una inundación.`;return}
+ app.floodLayer=L.geoJSON(geo,{style:{color:'#0877df',weight:1.5,fillColor:'#168ee8',fillOpacity:Number($('floodOpacity').value)/100}}).addTo(app.maps.flood);
+ if(app.floodLayer.getBounds().isValid())app.maps.flood.fitBounds(app.floodLayer.getBounds(),{padding:[15,15]});
+ $('floodNote').textContent='GeoJSON cargado. La superficie inundada requiere cálculo geoespacial.';
+ const r=app.flow&&app.flow.pronostico&&app.flow.pronostico.find(x=>Number(x.horizonte_h)===h);
+ if(r){let q=model==='GFS'?r.caudal_gfs_m3s:model==='ECMWF'?r.caudal_ecmwf_m3s:(Number(r.caudal_gfs_m3s)+Number(r.caudal_ecmwf_m3s))/2;if(Number.isFinite(Number(q)))$('floodFlow').textContent=num(q)+' m³/s'}
+}
+async function loadImpacts(){
+ const h=hourValue('impactTime'),model=$('impactModel').value,key=String(h).padStart(2,'0');
+ $('impactMapLabel').textContent=`+${h} h · ${model}`;
+ if(app.impactFlood)app.maps.impact.removeLayer(app.impactFlood);app.impactFlood=null;
+ const geo=await tryJson([`manchas/${model}_${key}h.geojson`,`manchas/${model}_H${key}.geojson`,`manchas/H${key}.geojson`]);
+ if(geo)app.impactFlood=L.geoJSON(geo,{style:{color:'#0877df',weight:1,fillColor:'#168ee8',fillOpacity:Number($('impactOpacity').value)/100}}).addTo(app.maps.impact);
+ Object.values(app.layers).forEach(l=>app.maps.impact.removeLayer(l));app.layers={};
+ const colors={viviendas:'#1587e8',poblacion:'#1587e8',colegios:'#e34e58',salud:'#e34e58',puentes:'#24966b',vias:'#f29b38',cultivos:'#a47ad8',critica:'#a47ad8'};
+ for(const c of document.querySelectorAll('#impactLayers input')){
+  const data=await tryJson([`impactos/${c.value}.geojson`]);if(!data)continue;
+  const color=colors[c.value];
+  app.layers[c.value]=L.geoJSON(data,{style:{color,weight:3},pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:5,color,fillColor:color,fillOpacity:.9}),onEachFeature:(f,l)=>{const p=f.properties||{};l.bindPopup(p.nombre||p.name||c.value)}});
+  if(c.checked)app.layers[c.value].addTo(app.maps.impact);
+ }
+ refreshLayers();
+ ['impactPopulation','impactBuildings','impactOther'].forEach(id=>$(id).textContent='—');
+}
+function refreshLayers(){
+ document.querySelectorAll('#impactLayers input').forEach(c=>{const l=app.layers[c.value];if(!l)return;if(c.checked&&!app.maps.impact.hasLayer(l))l.addTo(app.maps.impact);if(!c.checked&&app.maps.impact.hasLayer(l))app.maps.impact.removeLayer(l)});
+}
+$('rainModel').onchange=loadRain;['rainProduct','rainTime','rainStation'].forEach(id=>$(id).onchange=updateRain);$('reloadRain').onclick=loadRain;
+$('reloadFlow').onclick=loadFlow;$('applyThresholds').onclick=updateFlow;
+$('floodTime').onchange=loadFlood;$('floodScenario').onchange=loadFlood;$('loadFlood').onclick=loadFlood;
+$('floodOpacity').oninput=()=>{if(app.floodLayer)app.floodLayer.setStyle({fillOpacity:Number($('floodOpacity').value)/100})};
+$('impactTime').onchange=loadImpacts;$('impactModel').onchange=loadImpacts;$('refreshImpact').onclick=loadImpacts;
+$('impactOpacity').oninput=()=>{if(app.impactFlood)app.impactFlood.setStyle({fillOpacity:Number($('impactOpacity').value)/100})};
+document.querySelectorAll('#impactLayers input').forEach(c=>c.onchange=refreshLayers);
+
+createTimes();
+app.maps.rain=makeMap('rainMap',9);app.maps.flood=makeMap('floodMap',12);app.maps.impact=makeMap('impactMap',12);
+app.maps.rain.setView([-3.65,-80.45],9);app.maps.flood.setView(CENTER,12);app.maps.impact.setView(CENTER,12);
+makeChart('rainChart',[],[{label:'Precipitación',data:[],borderColor:'#238dcc'}],'Precipitación (mm)');
+makeChart('flowChart',[],[
+ {label:'Observado',data:[],borderColor:'#526a78'},
+ {label:'GFS',data:[],borderColor:'#238dcc'},
+ {label:'ECMWF',data:[],borderColor:'#df5656'},
+ {label:'Promedio',data:[],borderColor:'#20a68a'}
+],'Caudal (m³/s)');
+loadRain();loadFlow();loadFlood();loadImpacts();
 </script>
-
 </body>
 </html>
