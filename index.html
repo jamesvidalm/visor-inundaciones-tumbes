@@ -16,7 +16,7 @@
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px Inter,"Segoe UI",Arial,sans-serif}button,select,input{font:inherit}button,select{cursor:pointer}a{color:inherit;text-decoration:none}
 header{background:var(--navy);color:white;position:sticky;top:0;z-index:1000}.navbar{max-width:1600px;margin:auto;min-height:74px;padding:0 25px;display:flex;align-items:center;justify-content:space-between;gap:18px}.brand{display:flex;align-items:center;gap:0;color:white;flex-shrink:0}.brand strong{display:block;letter-spacing:.5px;font-size:17px}.brand small{display:block;color:#c6dce7;margin-top:4px;font-size:11px}.nav{display:flex;gap:4px;flex-wrap:wrap}.nav button{border:0;background:transparent;color:#e0edf3;padding:11px 12px;border-radius:7px;font-size:12px}.nav button.active,.nav button:hover{background:#167ba5;color:white}.menu{display:none;background:transparent;color:white;border:1px solid #607a8b;border-radius:6px;padding:9px}
 main{max-width:1600px;margin:auto;padding:22px 25px 35px}.page{display:none}.page.active{display:block}.pagehead{display:flex;justify-content:space-between;align-items:flex-start;gap:15px;margin:2px 0 20px}.pagehead h1{font-size:25px;margin:0 0 8px}.pagehead p{color:var(--muted);line-height:1.6;margin:0;max-width:900px}.eyebrow{font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#078b92;margin-bottom:9px}.btn{border:0;border-radius:7px;background:var(--cyan);color:#062e3c;padding:11px 15px;font-weight:750}.btn.alt{background:white;border:1px solid var(--border);color:var(--text)}
-.card{background:white;border:1px solid var(--border);border-radius:12px;padding:17px;box-shadow:0 5px 20px #183b4b08;min-width:0}.card h3,.card h4{margin:0;font-size:14px}.cardhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}.muted{color:var(--muted);font-size:11px}.grid{display:grid;gap:16px}.cols2{grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr)}.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}.controls{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:14px}.field{display:flex;flex-direction:column;gap:6px;min-width:130px}.field label{font-size:11px;color:var(--muted);font-weight:750}.field select,.field input{border:1px solid var(--border);border-radius:7px;background:white;padding:10px;color:var(--text);min-height:38px}.map{width:100%;height:470px;background:#e1eaed;border-radius:8px;z-index:1}.map.tall{height:calc(100vh - 310px);min-height:480px}.rain-map-card{width:100%}.chart{height:290px;position:relative}.chart.large{height:370px}.metricgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}.metric{padding:16px;border:1px solid var(--border);background:white;border-radius:10px}.metric label{display:block;color:var(--muted);font-size:11px}.metric strong{display:block;font-size:25px;margin:10px 0 5px}.metric small{color:var(--muted);font-size:10px;line-height:1.5}.legend{display:flex;gap:13px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:12px}.key{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:5px}.notice{padding:12px 14px;border:1px solid #f0ddb1;background:#fff8e9;color:#81621d;border-radius:8px;line-height:1.6;font-size:12px;margin-bottom:14px}.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:10px 8px;text-align:left;border-bottom:1px solid #e7eef0;white-space:nowrap}th{color:var(--muted);background:#f7fafb}td{color:#36535d}.badge{display:inline-block;padding:5px 8px;border-radius:12px;font-size:10px;font-weight:800}.bgreen{background:#e5f5ec;color:#26784c}.byellow{background:#fff3d2;color:#8a6819}.borange{background:#fff0df;color:#a85a19}.bred{background:#fde8e8;color:#b43232}.bnone{background:#eef2f4;color:#647983}
+.card{background:white;border:1px solid var(--border);border-radius:12px;padding:17px;box-shadow:0 5px 20px #183b4b08;min-width:0}.card h3,.card h4{margin:0;font-size:14px}.cardhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}.muted{color:var(--muted);font-size:11px}.grid{display:grid;gap:16px}.cols2{grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr)}.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}.controls{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:14px}.field{display:flex;flex-direction:column;gap:6px;min-width:130px}.field label{font-size:11px;color:var(--muted);font-weight:750}.field select,.field input{border:1px solid var(--border);border-radius:7px;background:white;padding:10px;color:var(--text);min-height:38px}.map{width:100%;height:470px;background:#e1eaed;border-radius:8px;z-index:1}.map.tall{height:calc(100vh - 310px);min-height:480px}.rain-map-card{width:100%;min-width:0}.rain-pair{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}.rain-pair .map.tall{height:calc(100vh - 360px);min-height:420px}@media(max-width:1000px){.rain-pair{grid-template-columns:1fr}.rain-pair .map.tall{height:55vh;min-height:380px}}.chart{height:290px;position:relative}.chart.large{height:370px}.metricgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}.metric{padding:16px;border:1px solid var(--border);background:white;border-radius:10px}.metric label{display:block;color:var(--muted);font-size:11px}.metric strong{display:block;font-size:25px;margin:10px 0 5px}.metric small{color:var(--muted);font-size:10px;line-height:1.5}.legend{display:flex;gap:13px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:12px}.key{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:5px}.notice{padding:12px 14px;border:1px solid #f0ddb1;background:#fff8e9;color:#81621d;border-radius:8px;line-height:1.6;font-size:12px;margin-bottom:14px}.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:10px 8px;text-align:left;border-bottom:1px solid #e7eef0;white-space:nowrap}th{color:var(--muted);background:#f7fafb}td{color:#36535d}.badge{display:inline-block;padding:5px 8px;border-radius:12px;font-size:10px;font-weight:800}.bgreen{background:#e5f5ec;color:#26784c}.byellow{background:#fff3d2;color:#8a6819}.borange{background:#fff0df;color:#a85a19}.bred{background:#fde8e8;color:#b43232}.bnone{background:#eef2f4;color:#647983}
 .homehero{min-height:590px;display:flex;flex-direction:column;justify-content:space-between;align-items:stretch;color:white;border-radius:14px;overflow:hidden;background-color:#0b3a50;background-image:linear-gradient(90deg,rgba(3,25,39,.94),rgba(3,25,39,.69) 48%,rgba(3,25,39,.12)),linear-gradient(0deg,rgba(3,25,39,.3),transparent),url("rio-tumbes.jpg");background-size:cover;background-position:center}.homecontent{max-width:900px;padding:48px 52px 24px}.homecontent h1{font-size:clamp(34px,4.4vw,59px);line-height:1.12;letter-spacing:-1px;margin:22px 0}.homecontent h1 span{color:#50e7dc}.homecontent p{color:#e0edf2;max-width:650px;line-height:1.8;font-size:15px}.homeactions{display:none}.btnline{display:none}.modules{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin:0 18px 18px;background:rgba(3,25,39,.82);backdrop-filter:blur(8px);border:1px solid #ffffff25;border-radius:12px;overflow:hidden}.module{padding:22px 12px;color:white;text-align:center;border-right:1px solid #ffffff20}.module:last-child{border:0}.module:hover{background:#10475a}.module .num{color:var(--cyan);font-size:22px;font-weight:800;margin-bottom:12px}.module strong{display:block;font-size:12px;margin-bottom:8px}.module p{font-size:11px;color:#c6dce7;line-height:1.6;margin:0}.homebelow{display:none;margin-top:34px}.homebelow h2{font-size:25px;margin:0 0 10px}.homebelow>p{color:var(--muted);line-height:1.8;max-width:900px}.feature{padding:21px}.feature .n{font-size:11px;color:#078b92;font-weight:800}.feature h3{margin:10px 0}.feature p{color:var(--muted);font-size:12px;line-height:1.7}.layerlist{display:grid;gap:10px}.layerlist label{display:flex;gap:9px;align-items:center;font-size:12px;color:#385662}.layerlist input{accent-color:#087f8c;width:16px;height:16px}.legendbox{background:#082b43;color:white;border-radius:8px;padding:15px;line-height:1.8;font-size:11px}.empty{background:#f7fafb;border:1px dashed #cddde1;border-radius:8px;padding:13px;color:var(--muted);font-size:11px;line-height:1.6;margin-top:12px}.footer{border-top:1px solid var(--border);padding:20px 25px;color:var(--muted);font-size:11px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 @media(max-width:1100px){.navbar{padding:0 15px}.nav button{padding:9px 7px;font-size:11px}main{padding:17px}.cols2{grid-template-columns:1fr}.metricgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.modules{grid-template-columns:repeat(3,1fr)}.module:nth-child(3){border-right:0}.module:nth-child(4),.module:nth-child(5){border-top:1px solid #ffffff20}}
 @media(max-width:760px){.navbar{flex-wrap:wrap;padding:12px 15px}.menu{display:block}.nav{display:none;order:3;width:100%;flex-direction:column;padding-bottom:8px}.nav.open{display:flex}.nav button{text-align:left;padding:12px}.homehero{min-height:590px}.homecontent{padding:28px 22px 20px}.homecontent h1{font-size:36px}.modules{grid-template-columns:repeat(2,1fr);margin:0 10px 10px}.module:nth-child(2n){border-right:0}.module:last-child{grid-column:1/-1}.metricgrid{gap:8px}.metric strong{font-size:21px}.pagehead{flex-direction:column}.map{height:360px}.map.tall{height:65vh;min-height:380px}.chart.large{height:330px}.cols3{grid-template-columns:1fr}}
@@ -62,7 +62,10 @@ main{max-width:1600px;margin:auto;padding:22px 25px 35px}.page{display:none}.pag
   <div class="field"><label>Producto</label><select id="rainProduct"><option value="interval">Intervalo de 3 horas</option></select></div>
   <div class="field"><label>Horizonte de pronóstico (hora Perú)</label><select id="rainTime"></select></div>
  </div>
- <div class="card rain-map-card"><div class="cardhead"><h3>Mapa de precipitación</h3><span class="muted" id="rainMapLabel">ECMWF · intervalo 3 h</span></div><div id="rainMap" class="map tall"></div><div class="legend" id="ecmwfLegend"><strong>Precipitación (mm)</strong><span id="ecmwfLegendScale">Cargando leyenda…</span></div><div class="empty" id="rainRasterStatus">Cargando catálogo ECMWF…</div><div class="empty" id="rainPixelValue">Mueve el cursor sobre el raster para consultar la precipitación del píxel.</div></div>
+ <div class="grid rain-pair">
+  <div class="card rain-map-card"><div class="cardhead"><h3>GFS · Pronóstico de precipitación</h3><span class="muted" id="gfsMapLabel">Pendiente de conectar</span></div><div id="gfsRainMap" class="map tall"></div><div class="empty" id="gfsRasterStatus">GFS se conectará cuando sus GeoTIFF y catálogo estén publicados. La hora seleccionada se comparte con ambos mapas.</div></div>
+  <div class="card rain-map-card"><div class="cardhead"><h3>ECMWF · Pronóstico de precipitación</h3><span class="muted" id="rainMapLabel">Intervalo 3 h</span></div><div id="rainMap" class="map tall"></div><div class="legend" id="ecmwfLegend"><strong>Precipitación (mm)</strong><span id="ecmwfLegendScale">Esperando raster…</span></div><div class="empty" id="rainRasterStatus">Cargando catálogo ECMWF…</div><div class="empty" id="rainPixelValue">Mueve el cursor sobre el raster ECMWF para consultar la precipitación del píxel.</div></div>
+ </div>
 </section>
 
 <section class="page" id="page-caudal">
@@ -209,7 +212,7 @@ salud.geojson, puentes.geojson, vias.geojson, cultivos.geojson, critica.geojson
 Son nombres previstos, no archivos ni pronósticos que ya existan.
 */
 
-let ecmwfCatalog=null, ecmwfRaster=null, ecmwfLayer=null, ecmwfLoadToken=0, rainBoundsLocked=false, cuencaLayer=null;
+let ecmwfCatalog=null, ecmwfRaster=null, ecmwfLayer=null, ecmwfLoadToken=0, rainBoundsLocked=false, cuencaLayer=null, gfsCuencaLayer=null;
 const rainRamp=[{v:0,c:'#ffffff'},{v:0.1,c:'#c7f4ff'},{v:1,c:'#70d5ff'},{v:2.5,c:'#39a8ff'},{v:5,c:'#3677ed'},{v:10,c:'#26a269'},{v:20,c:'#f4df35'},{v:35,c:'#f49a35'},{v:50,c:'#e64b35'},{v:75,c:'#9b2fae'}];
 function rainColor(v,max){
  if(!Number.isFinite(v)||v<0)return null;
@@ -227,7 +230,9 @@ async function loadCuenca(){
  try{
   const data=await fetchJson('shape/tumbes_cuenca.geojson');
   if(cuencaLayer)app.maps.rain.removeLayer(cuencaLayer);
-  cuencaLayer=L.geoJSON(data,{style:{color:'#073b4c',weight:3,opacity:1,fillColor:'#22c7b8',fillOpacity:0.04,dashArray:'7 4'},interactive:false}).addTo(app.maps.rain);
+  const basinStyle={color:'#073b4c',weight:3,opacity:1,fillColor:'#22c7b8',fillOpacity:0.04,dashArray:'7 4'};
+  cuencaLayer=L.geoJSON(data,{style:basinStyle,interactive:false}).addTo(app.maps.rain);
+  gfsCuencaLayer=L.geoJSON(data,{style:basinStyle,interactive:false}).addTo(app.maps.gfsRain);
   const basinBounds=cuencaLayer.getBounds();
   if(!basinBounds || !basinBounds.isValid()) throw new Error('El GeoJSON no contiene geometrías con coordenadas válidas.');
   // El encuadre se calcula exclusivamente con la cuenca, no con todo el Perú ni con el raster.
@@ -247,7 +252,10 @@ async function loadCuenca(){
   app.maps.rain.keyboard.enable();
   if(!app.maps.rain.zoomControl) L.control.zoom({position:'topright'}).addTo(app.maps.rain);
   app.maps.rain.invalidateSize({pan:false});
-  cuencaLayer.bringToFront();
+  app.maps.gfsRain.fitBounds(basinBounds,{padding:[35,35],animate:false});
+  app.maps.gfsRain.setMinZoom(5);app.maps.gfsRain.setMaxZoom(18);app.maps.gfsRain.setMaxBounds(basinBounds.pad(0.75));
+  app.maps.gfsRain.invalidateSize({pan:false});
+  cuencaLayer.bringToFront();gfsCuencaLayer.bringToFront();
   $('rainRasterStatus').textContent='Cuenca tumbes_cuenca.geojson cargada. Preparando raster ECMWF…';
   console.info('Cuenca cargada:',basinBounds.toBBoxString());
  }catch(e){
@@ -286,7 +294,7 @@ async function loadEcmwfRaster(){
   const response=await fetch(rasterUrl+'?v='+Date.now(),{cache:'no-store'});
   if(!response.ok)throw new Error('HTTP '+response.status+' al abrir '+rasterUrl);
   const buffer=await response.arrayBuffer();
-  if(buffer.byteLength<1000)throw new Error(`el archivo descargado solo tiene ${buffer.byteLength} bytes; no parece un GeoTIFF válido`);
+  if(buffer.byteLength<10000)throw new Error(`el archivo publicado solo tiene ${buffer.byteLength} bytes (${(buffer.byteLength/1024).toFixed(2)} KB). Es demasiado pequeño para el raster meteorológico esperado; revisa que el publicador esté copiando el GeoTIFF original completo y no un archivo vacío o truncado.`);
   // GeoTIFF clásico/BigTIFF debe tener firma II* o MM* en sus primeros bytes.
   const signature=new Uint8Array(buffer,0,4);
   const isTiff=(signature[0]===0x49&&signature[1]===0x49&&(signature[2]===42||signature[2]===43)&&signature[3]===0) || (signature[0]===0x4d&&signature[1]===0x4d&&signature[2]===0&&(signature[3]===42||signature[3]===43));
@@ -327,7 +335,9 @@ function pixelRainAt(latlng){
 }
 function updateRain(){
  const model=$('rainModel').value,product=$('rainProduct').value,h=hourValue('rainTime');
- $('rainMapLabel').textContent=`${model} · intervalo 3 h · +${String(h).padStart(2,'0')} h`;
+ $('rainMapLabel').textContent=`ECMWF · intervalo 3 h · +${String(h).padStart(2,'0')} h`;
+ $('gfsMapLabel').textContent=`+${String(h).padStart(2,'0')} h · esperando GeoTIFF GFS`;
+ if($('gfsRasterStatus'))$('gfsRasterStatus').textContent=`Horizonte seleccionado: +${String(h).padStart(2,'0')} h. El mapa GFS ya está preparado y muestra la cuenca; falta publicar data/pronostico_gfs.json y los GeoTIFF GFS para dibujar su precipitación.`;
 }
 async function loadFlow(){app.flow=await tryJson(['data/pronostico_caudal.json']);updateFlow()}
 function updateFlow(){
@@ -395,10 +405,10 @@ $('impactOpacity').oninput=()=>{if(app.impactFlood)app.impactFlood.setStyle({fil
 document.querySelectorAll('#impactLayers input').forEach(c=>c.onchange=refreshLayers);
 
 createTimes();
-app.maps.rain=makeMap('rainMap',9,false);app.maps.flood=makeMap('floodMap',12);app.maps.impact=makeMap('impactMap',12);
-app.maps.rain.setView([-3.65,-80.45],9);app.maps.flood.setView(CENTER,12);app.maps.impact.setView(CENTER,12);
+app.maps.rain=makeMap('rainMap',9,false);app.maps.gfsRain=makeMap('gfsRainMap',9,false);app.maps.flood=makeMap('floodMap',12);app.maps.impact=makeMap('impactMap',12);
+app.maps.rain.setView([-3.65,-80.45],9);app.maps.gfsRain.setView([-3.65,-80.45],9);app.maps.flood.setView(CENTER,12);app.maps.impact.setView(CENTER,12);
 app.maps.rain.on('mousemove',e=>{const v=pixelRainAt(e.latlng);$('rainPixelValue').textContent=v===null?'Píxel: sin dato o fuera del raster.':`Precipitación ECMWF en el píxel: ${num(v)} mm · Lat ${e.latlng.lat.toFixed(5)} · Lon ${e.latlng.lng.toFixed(5)}`});
-app.maps.rain.on('mouseout',()=>{$('rainPixelValue').textContent='Mueve el cursor sobre el raster para consultar la precipitación del píxel.'});
+app.maps.rain.on('mouseout',()=>{$('rainPixelValue').textContent='Mueve el cursor sobre el raster ECMWF para consultar la precipitación del píxel.'});
 makeChart('flowChart',[],[
  {label:'Observado',data:[],borderColor:'#526a78'},
  {label:'GFS',data:[],borderColor:'#238dcc'},
