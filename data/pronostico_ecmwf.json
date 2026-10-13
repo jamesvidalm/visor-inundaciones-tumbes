@@ -1,0 +1,177 @@
+{
+  "modelo": "ECMWF",
+  "ciclo_utc": "2026-10-13 06:00 UTC",
+  "ciclo_peru": "2026-10-13 01:00 UTC-5",
+  "zona_horaria": "America/Lima",
+  "formato": "GeoTIFF original; sin conversión a PNG",
+  "rasters": [
+    {
+      "horizonte_h": 3,
+      "fecha_peru": "2026-10-13 04:00",
+      "raster": "mapas/ecmwf/H003.tif",
+      "archivo_origen": "ECMWF_precipitacion_H003h.tif",
+      "tamano_bytes": 1809
+    },
+    {
+      "horizonte_h": 6,
+      "fecha_peru": "2026-10-13 07:00",
+      "raster": "mapas/ecmwf/H006.tif",
+      "archivo_origen": "ECMWF_precipitacion_H006h.tif",
+      "tamano_bytes": 1813
+    },
+    {
+      "horizonte_h": 9,
+      "fecha_peru": "2026-10-13 10:00",
+      "raster": "mapas/ecmwf/H009.tif",
+      "archivo_origen": "ECMWF_precipitacion_H009h.tif",
+      "tamano_bytes": 1807
+    },
+    {
+      "horizonte_h": 12,
+      "fecha_peru": "2026-10-13 13:00",
+      "raster": "mapas/ecmwf/H012.tif",
+      "archivo_origen": "ECMWF_precipitacion_H012h.tif",
+      "tamano_bytes": 1794
+    },
+    {
+      "horizonte_h": 15,
+      "fecha_peru": "2026-10-13 16:00",
+      "raster": "mapas/ecmwf/H015.tif",
+      "archivo_origen": "ECMWF_precipitacion_H015h.tif",
+      "tamano_bytes": 1778
+    },
+    {
+      "horizonte_h": 18,
+      "fecha_peru": "2026-10-13 19:00",
+      "raster": "mapas/ecmwf/H018.tif",
+      "archivo_origen": "ECMWF_precipitacion_H018h.tif",
+      "tamano_bytes": 1784
+    },
+    {
+      "horizonte_h": 21,
+      "fecha_peru": "2026-10-13 22:00",
+      "raster": "mapas/ecmwf/H021.tif",
+      "archivo_origen": "ECMWF_precipitacion_H021h.tif",
+      "tamano_bytes": 1798
+    },
+    {
+      "horizonte_h": 24,
+      "fecha_peru": "2026-10-14 01:00",
+      "raster": "mapas/ecmwf/H024.tif",
+      "archivo_origen": "ECMWF_precipitacion_H024h.tif",
+      "tamano_bytes": 1814
+    },
+    {
+      "horizonte_h": 27,
+      "fecha_peru": "2026-10-14 04:00",
+      "raster": "mapas/ecmwf/H027.tif",
+      "archivo_origen": "ECMWF_precipitacion_H027h.tif",
+      "tamano_bytes": 1816
+    },
+    {
+      "horizonte_h": 30,
+      "fecha_peru": "2026-10-14 07:00",
+      "raster": "mapas/ecmwf/H030.tif",
+      "archivo_origen": "ECMWF_precipitacion_H030h.tif",
+      "tamano_bytes": 1776
+    },
+    {
+      "horizonte_h": 33,
+      "fecha_peru": "2026-10-14 10:00",
+      "raster": "mapas/ecmwf/H033.tif",
+      "archivo_origen": "ECMWF_precipitacion_H033h.tif",
+      "tamano_bytes": 1798
+    },
+    {
+      "horizonte_h": 36,
+      "fecha_peru": "2026-10-14 13:00",
+      "raster": "mapas/ecmwf/H036.tif",
+      "archivo_origen": "ECMWF_precipitacion_H036h.tif",
+      "tamano_bytes": 1802
+    },
+    {
+      "horizonte_h": 39,
+      "fecha_peru": "2026-10-14 16:00",
+      "raster": "mapas/ecmwf/H039.tif",
+      "archivo_origen": "ECMWF_precipitacion_H039h.tif",
+      "tamano_bytes": 1786
+    },
+    {
+      "horizonte_h": 42,
+      "fecha_peru": "2026-10-14 19:00",
+      "raster": "mapas/ecmwf/H042.tif",
+      "archivo_origen": "ECMWF_precipitacion_H042h.tif",
+      "tamano_bytes": 1784
+    },
+    {
+      "horizonte_h": 45,
+      "fecha_peru": "2026-10-14 22:00",
+      "raster": "mapas/ecmwf/H045.tif",
+      "archivo_origen": "ECMWF_precipitacion_H045h.tif",
+      "tamano_bytes": 1788
+    },
+    {
+      "horizonte_h": 48,
+      "fecha_peru": "2026-10-15 01:00",
+      "raster": "mapas/ecmwf/H048.tif",
+      "archivo_origen": "ECMWF_precipitacion_H048h.tif",
+      "tamano_bytes": 1768
+    },
+    {
+      "horizonte_h": 51,
+      "fecha_peru": "2026-10-15 04:00",
+      "raster": "mapas/ecmwf/H051.tif",
+      "archivo_origen": "ECMWF_precipitacion_H051h.tif",
+      "tamano_bytes": 1698
+    },
+    {
+      "horizonte_h": 54,
+      "fecha_peru": "2026-10-15 07:00",
+      "raster": "mapas/ecmwf/H054.tif",
+      "archivo_origen": "ECMWF_precipitacion_H054h.tif",
+      "tamano_bytes": 1698
+    },
+    {
+      "horizonte_h": 57,
+      "fecha_peru": "2026-10-15 10:00",
+      "raster": "mapas/ecmwf/H057.tif",
+      "archivo_origen": "ECMWF_precipitacion_H057h.tif",
+      "tamano_bytes": 1784
+    },
+    {
+      "horizonte_h": 60,
+      "fecha_peru": "2026-10-15 13:00",
+      "raster": "mapas/ecmwf/H060.tif",
+      "archivo_origen": "ECMWF_precipitacion_H060h.tif",
+      "tamano_bytes": 1798
+    },
+    {
+      "horizonte_h": 63,
+      "fecha_peru": "2026-10-15 16:00",
+      "raster": "mapas/ecmwf/H063.tif",
+      "archivo_origen": "ECMWF_precipitacion_H063h.tif",
+      "tamano_bytes": 1786
+    },
+    {
+      "horizonte_h": 66,
+      "fecha_peru": "2026-10-15 19:00",
+      "raster": "mapas/ecmwf/H066.tif",
+      "archivo_origen": "ECMWF_precipitacion_H066h.tif",
+      "tamano_bytes": 1800
+    },
+    {
+      "horizonte_h": 69,
+      "fecha_peru": "2026-10-15 22:00",
+      "raster": "mapas/ecmwf/H069.tif",
+      "archivo_origen": "ECMWF_precipitacion_H069h.tif",
+      "tamano_bytes": 1806
+    },
+    {
+      "horizonte_h": 72,
+      "fecha_peru": "2026-10-16 01:00",
+      "raster": "mapas/ecmwf/H072.tif",
+      "archivo_origen": "ECMWF_precipitacion_H072h.tif",
+      "tamano_bytes": 1736
+    }
+  ]
+}
