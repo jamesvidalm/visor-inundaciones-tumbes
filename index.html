@@ -56,7 +56,7 @@ main{max-width:1600px;margin:auto;padding:22px 25px 35px}.page{display:none}.pag
  <div class="pagehead"><div><div class="eyebrow">Módulo 02</div><h1>Pronóstico de precipitación</h1><p>Comparación espacial y temporal de GFS y ECMWF. Horizonte de 72 horas, paso de 3 horas.</p></div><button class="btn alt" id="reloadRain">Recargar datos</button></div>
  <div class="controls">
   <div class="field"><label>Modelo</label><select id="rainModel"><option>GFS</option><option selected>ECMWF</option></select></div>
-  <div class="field"><label>Producto</label><select id="rainProduct"><option value="interval">Intervalo de 3 horas</option><option value="acc24">Acumulada 24 horas</option><option value="acc72">Acumulada 72 horas</option></select></div>
+  <div class="field"><label>Producto</label><select id="rainProduct"><option value="interval">Ráster del horizonte seleccionado</option><option value="acc24">Acumulada 24 horas (requiere producto)</option><option value="acc72">Acumulada 72 horas (requiere producto)</option></select></div>
   <div class="field"><label>Hora de pronóstico (Perú)</label><select id="rainTime"></select></div>
   <div class="field"><label>Estación / punto</label><select id="rainStation"><option>Tumbes</option><option>El Tigre</option><option>Matapalo</option><option>La Cruz</option><option>Corrales</option></select></div>
  </div>
@@ -214,10 +214,33 @@ Son nombres previstos, no archivos ni pronósticos que ya existan.
 async function loadRain(){
  const model=$('rainModel').value.toLowerCase();
  app.rain=await tryJson([`data/pronostico_${model}.json`]);
+ if(model==='ecmwf' && app.rain && Array.isArray(app.rain.rasters)){
+   const rasters=app.rain.rasters;
+   $('rainTime').innerHTML=rasters.map(r=>`<option value="${r.horizonte_h}">+${String(r.horizonte_h).padStart(3,'0')} h · ${r.fecha_peru||''}</option>`).join('');
+   if(rasters.length && !rasters.some(r=>Number(r.horizonte_h)===hourValue('rainTime'))) $('rainTime').value=String(rasters[0].horizonte_h);
+ } else {
+   $('rainTime').innerHTML=app.times.map(t=>`<option value="${t.h}">+${String(t.h).padStart(2,'0')} h · ${fmtDate(t.date)}</option>`).join('');
+ }
  updateRain();
 }
 function updateRain(){
  const model=$('rainModel').value,product=$('rainProduct').value,h=hourValue('rainTime');
+ if(app.rainOverlay){app.maps.rain.removeLayer(app.rainOverlay);app.rainOverlay=null;}
+ if(model==='ECMWF' && app.rain && Array.isArray(app.rain.rasters)){
+   const r=app.rain.rasters.find(x=>Number(x.horizonte_h)===h);
+   if(r){
+     $('rainMapLabel').textContent=`ECMWF · +${String(h).padStart(3,'0')} h · ${r.fecha_peru||'hora Perú no disponible'}`;
+     if(r.imagen && Array.isArray(r.bounds)){
+       app.rainOverlay=L.imageOverlay(r.imagen,r.bounds,{opacity:0.82,interactive:false}).addTo(app.maps.rain);
+       app.maps.rain.fitBounds(r.bounds,{padding:[12,12]});
+     }
+     $('rainStationNote').textContent=`Ciclo ECMWF: ${app.rain.ciclo_peru||app.rain.ciclo_utc||'no indicado'}. Ráster: ${r.archivo_origen||''}.`;
+     $('rainChartNote').textContent='El mapa ráster ECMWF está cargado. Para graficar valores por estación se requiere un archivo de datos puntuales.';
+     $('rainBars').innerHTML='<div class="empty">El ráster espacial está cargado. La tabla por estación se completará cuando se publiquen también los valores puntuales de precipitación.</div>';
+     makeChart('rainChart',[],[{label:'ECMWF',data:[],borderColor:'#238dcc'}],'Precipitación');
+     return;
+   }
+ }
  $('rainMapLabel').textContent=`${model} · ${product==='interval'?'intervalo 3 h':product==='acc24'?'acumulada 24 h':'acumulada 72 h'} · +${h} h`;
  const rows=app.rain?(app.rain.pronostico||app.rain.data||[]):[];
  const field=product==='interval'?'precipitacion_mm':product==='acc24'?'acumulado_24h_mm':'acumulado_72h_mm';
