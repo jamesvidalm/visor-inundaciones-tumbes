@@ -1,22 +1,23 @@
 
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sistema Hidrológico Tumbes | Estilo B</title>
+<title>Sistema Hidrológico Tumbes | Estilo C</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 :root {
-  --bg:#edf5f4;
-  --panel:#ffffff;
-  --text:#183d42;
-  --muted:#647d80;
-  --line:#d7e7e4;
-  --soft:#e4f3ef;
-  --accent:#087e83;
-  --accent2:#70a83b;
+  --bg:#101923;
+  --panel:#192634;
+  --text:#e4edf6;
+  --muted:#a1b2c5;
+  --line:#34475a;
+  --soft:#23384a;
+  --accent:#36a6e8;
+  --accent2:#53d6b0;
 }
 * { box-sizing:border-box; }
 body {
@@ -30,35 +31,34 @@ header {
   justify-content:space-between;
   align-items:center;
   gap:20px;
-  background:#123f43;
-  color:white;
-  padding:24px 30px;
+  padding:23px 28px;
+  background:#121e2a;
+  border-bottom:1px solid var(--line);
 }
-h1 { font-size:24px; margin:7px 0; }
-header p { color:#c4dfd9; margin:0; }
+h1 { font-size:23px; margin:7px 0; }
+header p { color:var(--muted); margin:0; }
 .eyebrow {
   font-size:10px;
   letter-spacing:1.5px;
   color:var(--accent);
   font-weight:700;
 }
-header .eyebrow { color:#8bd8c9; }
 .header-meta {
-  background:#20565a;
-  padding:13px 17px;
-  border-radius:8px;
+  border:1px solid var(--line);
+  padding:12px 16px;
+  border-radius:5px;
 }
 .header-meta span,.header-meta strong { display:block; }
 .header-meta span {
   font-size:10px;
-  color:#c4dfd9;
+  color:var(--muted);
   margin-bottom:5px;
 }
 nav {
   display:flex;
-  gap:7px;
-  padding:12px 24px;
-  background:#fff;
+  gap:4px;
+  padding:10px 22px;
+  background:#152230;
   border-bottom:1px solid var(--line);
   overflow-x:auto;
 }
@@ -66,16 +66,15 @@ button,select {
   font:inherit;
   padding:10px 12px;
   border:1px solid var(--line);
-  background:white;
+  background:#192634;
   color:var(--text);
-  border-radius:8px;
+  border-radius:5px;
   cursor:pointer;
 }
-nav button { white-space:nowrap; }
+nav button { white-space:nowrap; border-color:transparent; }
 nav button.active {
   background:var(--accent);
-  border-color:var(--accent);
-  color:#fff;
+  color:#071622;
 }
 main {
   max-width:1700px;
@@ -91,88 +90,75 @@ main {
   gap:15px;
   margin-bottom:20px;
 }
-.page-title h2 { font-size:26px; margin:6px 0; }
+.page-title h2 { font-size:25px; margin:6px 0; }
 .page-title p,.note {
   color:var(--muted);
   line-height:1.55;
 }
 .pill {
   font-size:11px;
-  padding:8px 11px;
-  background:#d8eeea;
-  color:#07666b;
-  border-radius:20px;
-  white-space:nowrap;
+  padding:7px 10px;
+  background:#213e52;
+  color:var(--accent);
+  border:1px solid #31516a;
+  border-radius:4px;
 }
 .metrics {
   display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:15px;
+  gap:13px;
   margin-bottom:18px;
 }
 .metric,.panel {
-  background:white;
+  background:var(--panel);
   border:1px solid var(--line);
-  border-radius:13px;
-  padding:19px;
+  border-radius:6px;
+  padding:18px;
   min-width:0;
-  box-shadow:0 3px 12px #173c4210;
 }
-.metric {
-  background:linear-gradient(145deg,#fff,#f6fbfa);
-}
-.metric span,.metric small {
-  display:block;
-  color:var(--muted);
-}
+.metric { border-top:2px solid var(--accent); }
+.metric span,.metric small { display:block; color:var(--muted); }
 .metric strong {
   display:block;
-  font-size:24px;
+  font-size:23px;
   margin:12px 0;
   color:var(--accent);
 }
 .metric small { font-size:11px; }
 .columns {
   display:grid;
-  grid-template-columns:1.15fr .85fr;
-  gap:17px;
+  grid-template-columns:1.1fr .9fr;
+  gap:16px;
 }
-.panel h3 { margin:0 0 16px; font-size:16px; }
+.panel h3 { margin:0 0 16px; font-size:15px; }
 .map {
-  height:350px;
-  border-radius:9px;
+  height:330px;
+  border-radius:4px;
   background:var(--soft);
 }
-.map.tall { height:600px; }
+.map.tall { height:590px; }
 .chart { height:290px; }
 .chart.large { height:390px; }
 .list-row {
   display:flex;
   gap:13px;
-  padding:15px 0;
+  padding:13px 0;
   border-bottom:1px solid var(--line);
 }
-.list-row>span {
-  color:var(--accent);
-  font-weight:700;
-}
+.list-row>span { color:var(--accent); font-weight:bold; }
 .list-row b,.list-row small { display:block; }
-.list-row small {
-  color:var(--muted);
-  margin-top:5px;
-}
+.list-row small { color:var(--muted); margin-top:5px; }
 .notice {
-  padding:14px;
-  background:#e7f5f1;
-  border-left:4px solid var(--accent);
-  border-radius:7px;
+  padding:13px;
+  background:#203548;
+  border-left:3px solid var(--accent);
   line-height:1.55;
   margin-top:17px;
 }
 .flood-layout {
   display:grid;
-  grid-template-columns:minmax(0,1fr) 310px;
-  gap:17px;
+  grid-template-columns:minmax(0,1fr) 300px;
+  gap:16px;
 }
 .toolbar {
   display:flex;
@@ -195,7 +181,7 @@ table {
 }
 th,td {
   text-align:left;
-  padding:14px;
+  padding:13px;
   border-bottom:1px solid var(--line);
 }
 th {
@@ -205,10 +191,10 @@ th {
 }
 .table-wrap { overflow:auto; }
 footer {
-  padding:20px 28px;
+  padding:18px 28px;
   color:var(--muted);
   border-top:1px solid var(--line);
-  background:#fff;
+  background:#121e2a;
   font-size:11px;
 }
 @media(max-width:850px) {
@@ -224,6 +210,7 @@ footer {
 }
 </style>
 </head>
+
 <body>
 <header>
   <div>
@@ -233,7 +220,7 @@ footer {
   </div>
   <div class="header-meta">
     <span>DISEÑO DE INTERFAZ</span>
-    <strong>B · Geoespacial moderno</strong>
+    <strong>C · Oscuro técnico</strong>
   </div>
 </header>
 
@@ -249,17 +236,17 @@ footer {
 <section id="inicio" class="page active">
   <div class="page-title">
     <div>
-      <div class="eyebrow">VISTA GENERAL</div>
+      <div class="eyebrow">PANEL GENERAL</div>
       <h2>Estado hidrológico de la cuenca</h2>
-      <p>Resumen de los pronósticos y escenarios de inundación disponibles.</p>
+      <p>Resumen de los pronósticos y escenarios hidráulicos disponibles.</p>
     </div>
     <span class="pill">Datos reales pendientes de conexión</span>
   </div>
 
   <div class="metrics">
-    <article class="metric"><span>Modelos meteorológicos</span><strong>GFS / ECMWF</strong><small>Pronósticos por conectar</small></article>
-    <article class="metric"><span>Caudal de El Tigre</span><strong>— m³/s</strong><small>Última observación disponible</small></article>
-    <article class="metric"><span>Actualización del sistema</span><strong>—</strong><small>Fecha de la última corrida</small></article>
+    <article class="metric"><span>Pronóstico meteorológico</span><strong>GFS / ECMWF</strong><small>Datos por conectar</small></article>
+    <article class="metric"><span>Caudal de El Tigre</span><strong>— m³/s</strong><small>Último dato disponible</small></article>
+    <article class="metric"><span>Última actualización</span><strong>—</strong><small>Fecha de corrida pendiente</small></article>
     <article class="metric"><span>Escenarios hidráulicos</span><strong>—</strong><small>Manchas por publicar</small></article>
   </div>
 
@@ -267,33 +254,33 @@ footer {
     <article class="panel">
       <h3>Área de estudio</h3>
       <div id="map-home" class="map"></div>
-      <p class="note">Mapa satelital de referencia de Tumbes.</p>
+      <p class="note">Mapa satelital de referencia centrado en Tumbes.</p>
     </article>
     <article class="panel">
-      <h3>Módulos de consulta</h3>
-      <div class="list-row"><span>01</span><div><b>Pronóstico de precipitación</b><small>Mapas y acumulados de GFS y ECMWF</small></div></div>
-      <div class="list-row"><span>02</span><div><b>Pronóstico de caudal</b><small>Hidrograma de la estación El Tigre</small></div></div>
-      <div class="list-row"><span>03</span><div><b>Áreas de inundación</b><small>Escenarios hidráulicos por caudal</small></div></div>
+      <h3>Componentes del sistema</h3>
+      <div class="list-row"><span>01</span><div><b>Pronóstico de precipitación</b><small>Comparación de GFS y ECMWF</small></div></div>
+      <div class="list-row"><span>02</span><div><b>Pronóstico de caudal</b><small>Hidrograma observado y previsto de El Tigre</small></div></div>
+      <div class="list-row"><span>03</span><div><b>Áreas de inundación</b><small>Consulta de escenarios hidráulicos</small></div></div>
       <div class="list-row"><span>04</span><div><b>Pronóstico de impactos</b><small>Edificaciones, población, cultivos y vías</small></div></div>
-      <div class="notice">La interfaz está preparada para mostrar tus resultados procesados localmente y publicados en GitHub.</div>
+      <div class="notice">La interfaz mostrará los resultados procesados en tu computadora y publicados en GitHub.</div>
     </article>
   </div>
 </section>
 
 <section id="precipitacion" class="page">
   <div class="page-title">
-    <div><div class="eyebrow">MODELOS METEOROLÓGICOS</div><h2>Pronóstico de precipitación</h2><p>Consulta temporal y espacial de la lluvia prevista.</p></div>
+    <div><div class="eyebrow">MODELOS METEOROLÓGICOS</div><h2>Pronóstico de precipitación</h2><p>Consulta temporal y espacial de lluvia prevista.</p></div>
     <span class="pill">Datos por conectar</span>
   </div>
   <div class="metrics">
-    <article class="metric"><span>Modelo meteorológico</span><strong>GFS</strong><small>Pronóstico pendiente</small></article>
-    <article class="metric"><span>Modelo meteorológico</span><strong>ECMWF</strong><small>Pronóstico pendiente</small></article>
-    <article class="metric"><span>Acumulado previsto</span><strong>— mm</strong><small>Se calculará con los datos reales</small></article>
-    <article class="metric"><span>Fecha de inicialización</span><strong>—</strong><small>Última corrida publicada</small></article>
+    <article class="metric"><span>Modelo</span><strong>GFS</strong><small>Pronóstico pendiente</small></article>
+    <article class="metric"><span>Modelo</span><strong>ECMWF</strong><small>Pronóstico pendiente</small></article>
+    <article class="metric"><span>Acumulación prevista</span><strong>— mm</strong><small>Se calculará con datos reales</small></article>
+    <article class="metric"><span>Inicialización</span><strong>—</strong><small>Última corrida publicada</small></article>
   </div>
   <div class="columns">
-    <article class="panel"><h3>Precipitación prevista</h3><div class="chart"><canvas id="rainChart"></canvas></div><p class="note">Comparación de acumulados cuando se conecten las series.</p></article>
-    <article class="panel"><h3>Distribución espacial de lluvia</h3><div id="rain-map" class="map"></div><p class="note">Aquí se mostrará el raster de precipitación pronosticada.</p></article>
+    <article class="panel"><h3>Precipitación prevista</h3><div class="chart"><canvas id="rainChart"></canvas></div><p class="note">Las series se conectarán desde los archivos publicados.</p></article>
+    <article class="panel"><h3>Distribución espacial de lluvia</h3><div id="rain-map" class="map"></div><p class="note">Aquí se mostrará la capa raster de precipitación.</p></article>
   </div>
 </section>
 
@@ -304,27 +291,32 @@ footer {
   </div>
   <div class="metrics">
     <article class="metric"><span>Estación</span><strong>El Tigre</strong><small>Río Tumbes</small></article>
-    <article class="metric"><span>Caudal observado</span><strong>— m³/s</strong><small>Último registro disponible</small></article>
-    <article class="metric"><span>Máximo pronosticado</span><strong>— m³/s</strong><small>Dentro del horizonte previsto</small></article>
-    <article class="metric"><span>Horizonte de pronóstico</span><strong>72 horas</strong><small>Según la corrida disponible</small></article>
+    <article class="metric"><span>Caudal observado</span><strong>— m³/s</strong><small>Último registro</small></article>
+    <article class="metric"><span>Máximo pronosticado</span><strong>— m³/s</strong><small>En el horizonte previsto</small></article>
+    <article class="metric"><span>Horizonte</span><strong>72 horas</strong><small>Según corrida disponible</small></article>
   </div>
   <article class="panel">
     <h3>Hidrograma de caudal</h3>
     <div class="chart large"><canvas id="flowChart"></canvas></div>
-    <p class="note">Se conectarán las series observadas y pronosticadas de El Tigre.</p>
+    <p class="note">Las curvas se cargarán desde los archivos de caudal observados y pronosticados.</p>
   </article>
 </section>
 
 <section id="inundacion" class="page">
   <div class="page-title">
-    <div><div class="eyebrow">MODELAMIENTO HIDRÁULICO</div><h2>Áreas de inundación</h2><p>Explora las manchas hidráulicas según el caudal seleccionado.</p></div>
+    <div><div class="eyebrow">MODELAMIENTO HIDRÁULICO</div><h2>Áreas de inundación</h2><p>Explora los escenarios hidráulicos por caudal.</p></div>
     <span class="pill">Escenarios por conectar</span>
   </div>
   <div class="flood-layout">
     <article class="panel">
       <div class="toolbar">
         <label for="q">Caudal del escenario</label>
-        <select id="q"><option value="50">50</option><option value="100">100</option><option value="150">150</option><option value="300">300</option></select>
+        <select id="q">
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="150">150</option>
+          <option value="300">300</option>
+        </select>
         <span>m³/s</span>
       </div>
       <div id="flood-map" class="map tall"></div>
@@ -336,24 +328,29 @@ footer {
       <div class="summary-line"><span>Área inundada</span><b>— ha</b></div>
       <div class="summary-line"><span>Edificaciones expuestas</span><b>—</b></div>
       <div class="summary-line"><span>Población expuesta</span><b>—</b></div>
-      <div class="notice">Los resultados se calcularán a partir de la mancha hidráulica y de las capas espaciales de exposición.</div>
+      <div class="notice">Las cifras se completarán a partir de las simulaciones hidráulicas y las capas de exposición.</div>
     </article>
   </div>
 </section>
 
 <section id="impactos" class="page">
   <div class="page-title">
-    <div><div class="eyebrow">ANÁLISIS DE EXPOSICIÓN</div><h2>Pronóstico de impactos</h2><p>Evaluación de población, edificaciones e infraestructura potencialmente expuestas.</p></div>
-    <span class="pill">Resultados por conectar</span>
+    <div><div class="eyebrow">ANÁLISIS DE EXPOSICIÓN</div><h2>Pronóstico de impactos</h2><p>Evaluación de población, edificaciones e infraestructura expuestas.</p></div>
+    <span class="pill">Datos por conectar</span>
   </div>
   <article class="panel toolbar">
     <label for="qi">Escenario de caudal</label>
-    <select id="qi"><option value="50">50</option><option value="100">100</option><option value="150">150</option><option value="300">300</option></select>
+    <select id="qi">
+      <option value="50">50</option>
+      <option value="100">100</option>
+      <option value="150">150</option>
+      <option value="300">300</option>
+    </select>
     <span>m³/s</span>
   </article>
   <div class="metrics">
     <article class="metric"><span>Área inundada</span><strong>— ha</strong><small>Según simulación hidráulica</small></article>
-    <article class="metric"><span>Edificaciones expuestas</span><strong>—</strong><small>Huella de edificaciones</small></article>
+    <article class="metric"><span>Edificaciones expuestas</span><strong>—</strong><small>Huella de edificios</small></article>
     <article class="metric"><span>Población expuesta</span><strong>—</strong><small>Estimación espacial</small></article>
     <article class="metric"><span>Infraestructura expuesta</span><strong>—</strong><small>Vías y servicios</small></article>
   </div>
@@ -397,53 +394,62 @@ function addMap(id){
 }
 ['map-home','rain-map','flood-map'].forEach(id=>maps[id]=addMap(id));
 
-document.getElementById('q').addEventListener('change',e=>{
-  const q=e.target.value;
+async function loadFlood(){
+  const q=document.getElementById('q').value;
   document.getElementById('q-label').textContent=q+' m³/s';
   document.getElementById('qi').value=q;
   document.getElementById('flood-status').textContent='Buscando escenario Q'+q+'...';
 
-  fetch('manchas/Q'+q.padStart(3,'0')+'.geojson?v='+Date.now())
-    .then(r=>{if(!r.ok)throw Error();return r.json();})
-    .then(g=>{
-      if(window.floodLayer)maps['flood-map'].removeLayer(window.floodLayer);
-      window.floodLayer=L.geoJSON(g,{
-        style:{color:'#087e83',weight:1,fillColor:'#24aaa0',fillOpacity:.4}
-      }).addTo(maps['flood-map']);
-      if(window.floodLayer.getBounds().isValid()){
-        maps['flood-map'].fitBounds(window.floodLayer.getBounds());
-      }
-      document.getElementById('flood-status').textContent='Mancha cargada para '+q+' m³/s.';
-    })
-    .catch(()=>{
-      document.getElementById('flood-status').textContent=
-        'No hay GeoJSON publicado para '+q+' m³/s. La interfaz está preparada para conectarlo.';
-    });
-});
+  try{
+    const response=await fetch('manchas/Q'+q.padStart(3,'0')+'.geojson?v='+Date.now());
+    if(!response.ok) throw Error('Escenario no publicado');
+    const geojson=await response.json();
 
+    if(window.floodLayer) maps['flood-map'].removeLayer(window.floodLayer);
+    window.floodLayer=L.geoJSON(geojson,{
+      style:{color:'#36a6e8',weight:1,fillColor:'#36a6e8',fillOpacity:.4}
+    }).addTo(maps['flood-map']);
+
+    if(window.floodLayer.getBounds().isValid()){
+      maps['flood-map'].fitBounds(window.floodLayer.getBounds());
+    }
+    document.getElementById('flood-status').textContent='Mancha cargada para '+q+' m³/s.';
+  }catch(error){
+    document.getElementById('flood-status').textContent=
+      'No existe un GeoJSON publicado para '+q+' m³/s. El visor está preparado para conectarlo.';
+  }
+}
+
+document.getElementById('q').addEventListener('change',loadFlood);
 document.getElementById('qi').addEventListener('change',e=>{
   document.getElementById('q').value=e.target.value;
-  document.getElementById('q').dispatchEvent(new Event('change'));
+  loadFlood();
 });
 
 function makeChart(id){
   return new Chart(document.getElementById(id),{
     type:'line',
     data:{labels:[],datasets:[
-      {label:'GFS / observado',data:[],borderColor:'#087e83',tension:.25},
-      {label:'ECMWF / pronosticado',data:[],borderColor:'#70a83b',tension:.25}
+      {label:'GFS / observado',data:[],borderColor:'#36a6e8',tension:.25},
+      {label:'ECMWF / pronosticado',data:[],borderColor:'#53d6b0',tension:.25}
     ]},
     options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'bottom'}},
-      scales:{y:{beginAtZero:true}}
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{color:'#a1b2c5'}}},
+      scales:{
+        x:{ticks:{color:'#a1b2c5'},grid:{color:'#34475a'}},
+        y:{beginAtZero:true,ticks:{color:'#a1b2c5'},grid:{color:'#34475a'}}
+      }
     }
   });
 }
 makeChart('rainChart');
 makeChart('flowChart');
+loadFlood();
 </script>
 </body>
 </html>
+
 
 
