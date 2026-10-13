@@ -173,14 +173,19 @@ $('menuBtn').onclick=()=>$('nav').classList.toggle('open');
 function makeMap(id,zoom=10,locked=false){
  const map=L.map(id,{dragging:!locked,touchZoom:!locked,scrollWheelZoom:!locked,doubleClickZoom:!locked,boxZoom:!locked,keyboard:!locked,zoomControl:!locked,attributionControl:id!=='rainMap'}).setView(CENTER,zoom);
  if(id==='rainMap'){
-  // Módulo de precipitación: sin mapa base ni imagen satelital.
-  // Se muestra únicamente el GeoTIFF ECMWF y el contorno de la cuenca.
-  map.getContainer().style.background='#f5f8f8';
+  // El mapa base se mantiene debajo del raster. Cambiar el fondo no elimina el pronóstico.
   const rasterPane=map.createPane('rainRasterPane');
   rasterPane.style.zIndex='350';
   rasterPane.style.pointerEvents='none';
   const basinPane=map.createPane('basinPane');
   basinPane.style.zIndex='450';
+  const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+   maxZoom:19,attribution:'&copy; OpenStreetMap contributors',pane:'tilePane'
+  }).addTo(map);
+  const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+   maxZoom:19,attribution:'Tiles &copy; Esri',pane:'tilePane'
+  });
+  L.control.layers({'Mapa base':osm,'Imagen satelital':sat},null,{position:'topright',collapsed:false}).addTo(map);
  }else{
   const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
   const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles &copy; Esri'});
@@ -260,7 +265,7 @@ async function loadCuenca(){
   app.maps.rain.doubleClickZoom.enable();
   app.maps.rain.boxZoom.enable();
   app.maps.rain.keyboard.enable();
-  if(!app.maps.rain.zoomControl) L.control.zoom({position:'topright'}).addTo(app.maps.rain);
+  if(!app.maps.rain.zoomControl) L.control.zoom({position:'topleft'}).addTo(app.maps.rain);
   app.maps.rain.invalidateSize({pan:false});
   cuencaLayer.bringToFront();
   $('rainRasterStatus').textContent='Cuenca tumbes_cuenca.geojson cargada. Preparando raster ECMWF…';
@@ -402,7 +407,7 @@ async function loadImpacts(){
 function refreshLayers(){
  document.querySelectorAll('#impactLayers input').forEach(c=>{const l=app.layers[c.value];if(!l)return;if(c.checked&&!app.maps.impact.hasLayer(l))l.addTo(app.maps.impact);if(!c.checked&&app.maps.impact.hasLayer(l))app.maps.impact.removeLayer(l)});
 }
-$('rainModel').onchange=loadRain;$('rainProduct').onchange=updateRain;$('rainTime').onchange=()=>{updateRain();setRainStatus('Cambiando al horizonte +'+String(hourValue('rainTime')).padStart(2,'0')+' h…');loadEcmwfRaster()};$('reloadRain').onclick=async()=>{await loadRain();if(ecmwfCatalog)await loadEcmwfRaster()};
+$('rainModel').onchange=loadRain;$('rainProduct').onchange=updateRain;$('rainTime').onchange=()=>{const h=hourValue('rainTime');updateRain();setRainStatus('Cargando automáticamente el ráster ECMWF de +'+String(h).padStart(2,'0')+' h…');loadEcmwfRaster()};$('reloadRain').onclick=async()=>{await loadRain()};
 $('reloadFlow').onclick=loadFlow;$('applyThresholds').onclick=updateFlow;
 $('floodTime').onchange=loadFlood;$('floodScenario').onchange=loadFlood;$('loadFlood').onclick=loadFlood;
 $('floodOpacity').oninput=()=>{if(app.floodLayer)app.floodLayer.setStyle({fillOpacity:Number($('floodOpacity').value)/100})};
