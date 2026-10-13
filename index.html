@@ -233,24 +233,36 @@ const ecmwfHashesByHour=new Map();
 const ecmwfValueSignaturesByHour=new Map();
 function rasterValueSignature(geo){const band=geo&&geo.values&&geo.values[0];if(!band||!band.length)return '';const out=[];const ry=Math.max(1,Math.floor(band.length/32));for(let y=0;y<band.length;y+=ry){const row=band[y]||[];const rx=Math.max(1,Math.floor(row.length/32));for(let x=0;x<row.length;x+=rx){const v=Number(row[x]);out.push(Number.isFinite(v)?v.toPrecision(7):'N');}}return out.join(',');}
 async function sha256Hex(buffer){const digest=await crypto.subtle.digest('SHA-256',buffer);return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');}
-// Escala dinámica por GeoTIFF: cada horizonte adapta sus colores a sus propios
-// valores para que los cambios entre archivos sean visibles en el mapa.
-const RAIN_COLORS=['#eafaff','#70d5ff','#3677ed','#26a269','#f4df35','#e64b35','#9b2fae'];
-function rainColor(v,minValue,maxValue){
+// Escala discreta de 10 intervalos recalculada para cada GeoTIFF seleccionado.
+// Los valores de cada hora determinan los límites de la leyenda y los colores.
+const RAIN_CLASS_COLORS=[
+ '#e7f7ff','#b7e9ff','#78d4f5','#35b9e8','#3288bd',
+ '#386cb0','#35a66f','#f1d83b','#f28e2b','#d73027'
+];
+function buildRainScale(minValue,maxValue){
+ const min=Math.max(0,Number.isFinite(minValue)?minValue:0);
+ const max=Number.isFinite(maxValue)&&maxValue>min?maxValue:(min+1);
+ const breaks=Array.from({length:11},(_,i)=>min+(max-min)*i/10);
+ return {min,max,breaks,colors:RAIN_CLASS_COLORS.slice()};
+}
+function rainColor(v,scale){
  if(!Number.isFinite(v)||v<0)return null;
  if(v===0)return 'rgba(255,255,255,0)';
- const lo=Number.isFinite(minValue)?minValue:0;
- const hi=Number.isFinite(maxValue)&&maxValue>lo?maxValue:lo+1;
- const t=Math.max(0,Math.min(0.999999,(v-lo)/(hi-lo)));
- const idx=Math.min(RAIN_COLORS.length-1,Math.floor(t*RAIN_COLORS.length));
- return RAIN_COLORS[idx];
+ if(!scale)return 'rgba(120,190,230,0.85)';
+ let idx=scale.breaks.findIndex((edge,i)=>i>0&&v<=edge)-1;
+ if(idx<0)idx=9;
+ idx=Math.max(0,Math.min(9,idx));
+ return scale.colors[idx];
 }
 function setRainStatus(msg){$('rainRasterStatus').textContent=msg}
-function formatRainLegend(minValue,maxValue){
- const lo=Number.isFinite(minValue)?minValue:0;
- const hi=Number.isFinite(maxValue)&&maxValue>lo?maxValue:lo+1;
- const ticks=RAIN_COLORS.map((c,i)=>({c,label:num(lo+(hi-lo)*i/(RAIN_COLORS.length-1))}));
- $('ecmwfLegendScale').innerHTML=`<span style="display:inline-flex;gap:7px;align-items:center;flex-wrap:wrap">${ticks.map(t=>`<span><i class="key" style="background:${t.c};border:1px solid #d5e0e4"></i>${t.label} mm</span>`).join('')}</span>`;
+function formatRainLegend(scale){
+ if(!scale){$('ecmwfLegendScale').textContent='Esperando raster…';return;}
+ const parts=[];
+ for(let i=0;i<10;i++){
+  const a=scale.breaks[i],b=scale.breaks[i+1];
+  parts.push(`<span class="legend-interval"><i class="key" style="background:${scale.colors[i]};border:1px solid #d5e0e4"></i><span>${num(a)}–${num(b)} mm</span></span>`);
+ }
+ $('ecmwfLegendScale').innerHTML=`<span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${parts.join('')}</span>`;
 }
 async function loadCuenca(){
  try{
@@ -351,16 +363,17 @@ async function loadEcmwfRaster(){
   const vals=(geo.values&&geo.values[0])||[];let min=Infinity,max=-Infinity,validCount=0;
   for(let y=0;y<vals.length;y+=Math.max(1,Math.floor(vals.length/400)))for(let x=0;x<(vals[y]||[]).length;x+=Math.max(1,Math.floor((vals[y]||[]).length/400))){const v=Number(vals[y][x]);if(Number.isFinite(v)&&v>=0){min=Math.min(min,v);max=Math.max(max,v);validCount++}}
   if(!validCount)throw new Error('el GeoTIFF no contiene valores de precipitación válidos');
-  const colorMin=Number.isFinite(min)?min:0;
-  const colorMax=Number.isFinite(max)&&max>colorMin?max:colorMin+1;
-  const layer=new GeoRasterLayer({georaster:geo,pane:ecmwfPaneName,opacity:.92,resolution:512,pixelValuesToColorFn:values=>rainColor(Number(values[0]),colorMin,colorMax)});
+  const selectedPane=ecmwfPaneName;
+  // Calcular límites y 10 clases con los valores del GeoTIFF de ESTA hora.
+  const rainScale=buildRainScale(min,max);
+  const layer=new GeoRasterLayer({georaster:geo,pane:selectedPane,opacity:0.88,resolution:512,pixelValuesToColorFn:values=>rainColor(Number(values[0]),rainScale)});
   if(token!==ecmwfLoadToken)return;
   // La capa anterior ya fue retirada; instalar solo la imagen del horizonte elegido.
   ecmwfRaster=geo;ecmwfLayer=layer;layer.addTo(app.maps.rain);layer.redraw();
   if(cuencaLayer)cuencaLayer.bringToFront();
-  formatRainLegend(colorMin,colorMax);
+  formatRainLegend(rainScale);
   $('rainMapLabel').textContent=`ECMWF · intervalo 3 h · +${String(h).padStart(2,'0')} h`;
-  setRainStatus(`Ráster ACTUAL: +${String(h).padStart(2,'0')} h · archivo ${item.archivo_origen||relativePath} · ruta ${relativePath} · ${(buffer.byteLength/1024).toFixed(1)} KB · SHA-256 ${sha256.slice(0,16)}… · rango ${num(min)}–${num(max)} mm.` + (previousSameHash ? ` ADVERTENCIA: el archivo es idéntico byte a byte al horizonte +${String(previousSameHash[0]).padStart(2,'0')} h; revisar los GeoTIFF publicados/originales.` : previousSameValues ? ` ADVERTENCIA: los valores de píxel muestreados son iguales al horizonte +${String(previousSameValues[0]).padStart(2,'0')} h; revisar si se publicaron los rásteres correctos.` : '')); 
+  setRainStatus(`RÁSTER MOSTRADO: +${String(h).padStart(2,'0')} h · archivo ${item.archivo_origen||relativePath} · ruta ${relativePath} · ${(buffer.byteLength/1024).toFixed(1)} KB · SHA-256 ${sha256.slice(0,16)}… · rango ${num(min)}–${num(max)} mm · 10 intervalos dinámicos.` + (previousSameHash ? ` ADVERTENCIA: el archivo es idéntico byte a byte al horizonte +${String(previousSameHash[0]).padStart(2,'0')} h; revisar los GeoTIFF publicados/originales.` : previousSameValues ? ` ADVERTENCIA: los valores de píxel muestreados son iguales al horizonte +${String(previousSameValues[0]).padStart(2,'0')} h; revisar si se publicaron los rásteres correctos.` : '')); 
   $('rainPixelValue').textContent='Mueve el cursor sobre el ráster para consultar la precipitación del horizonte seleccionado.';
   app.maps.rain.invalidateSize({pan:false});
   console.info('ECMWF cargado para horizonte',h,'archivo',relativePath,'bytes',buffer.byteLength,'sha256',sha256,'rango',min,max,'token',token);
