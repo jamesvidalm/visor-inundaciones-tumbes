@@ -171,13 +171,21 @@ document.querySelectorAll('[data-gopage]').forEach(b=>b.onclick=e=>{e.preventDef
 $('menuBtn').onclick=()=>$('nav').classList.toggle('open');
 
 function makeMap(id,zoom=10,locked=false){
- const map=L.map(id,{dragging:!locked,touchZoom:!locked,scrollWheelZoom:!locked,doubleClickZoom:!locked,boxZoom:!locked,keyboard:!locked,zoomControl:!locked, attributionControl:true}).setView(CENTER,zoom);
- // El raster debe estar por encima de cualquier mapa base y debajo del contorno de cuenca.
- // Los mapas base de Leaflet usan tilePane (z-index 200); este panel usa 350.
- if(id==='rainMap'){const pane=map.createPane('rainRasterPane');pane.style.zIndex='350';pane.style.pointerEvents='none';}
- const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
- const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles &copy; Esri'});
- if(!locked)L.control.layers({'Mapa base':osm,'Imagen satelital':sat}).addTo(map);
+ const map=L.map(id,{dragging:!locked,touchZoom:!locked,scrollWheelZoom:!locked,doubleClickZoom:!locked,boxZoom:!locked,keyboard:!locked,zoomControl:!locked,attributionControl:id!=='rainMap'}).setView(CENTER,zoom);
+ if(id==='rainMap'){
+  // Módulo de precipitación: sin mapa base ni imagen satelital.
+  // Se muestra únicamente el GeoTIFF ECMWF y el contorno de la cuenca.
+  map.getContainer().style.background='#f5f8f8';
+  const rasterPane=map.createPane('rainRasterPane');
+  rasterPane.style.zIndex='350';
+  rasterPane.style.pointerEvents='none';
+  const basinPane=map.createPane('basinPane');
+  basinPane.style.zIndex='450';
+ }else{
+  const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
+  const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles &copy; Esri'});
+  if(!locked)L.control.layers({'Mapa base':osm,'Imagen satelital':sat}).addTo(map);
+ }
  return map;
 }
 function makeChart(id,labels,datasets,yTitle=''){
@@ -234,17 +242,17 @@ async function loadCuenca(){
   const data=await fetchJson('shape/tumbes_cuenca.geojson');
   if(cuencaLayer)app.maps.rain.removeLayer(cuencaLayer);
   const basinStyle={color:'#073b4c',weight:3,opacity:1,fillColor:'#22c7b8',fillOpacity:0.04,dashArray:'7 4'};
-  cuencaLayer=L.geoJSON(data,{style:basinStyle,interactive:false}).addTo(app.maps.rain);
+  cuencaLayer=L.geoJSON(data,{pane:'basinPane',style:basinStyle,interactive:false}).addTo(app.maps.rain);
   const basinBounds=cuencaLayer.getBounds();
   if(!basinBounds || !basinBounds.isValid()) throw new Error('El GeoJSON no contiene geometrías con coordenadas válidas.');
   // El encuadre se calcula exclusivamente con la cuenca, no con todo el Perú ni con el raster.
-  app.maps.rain.fitBounds(basinBounds,{padding:[70,70],maxZoom:9,animate:false});
+  app.maps.rain.fitBounds(basinBounds,{padding:[24,24],maxZoom:11,animate:false});
   const basinZoom=app.maps.rain.getZoom();
   // La cuenca define el encuadre inicial, pero el usuario puede acercarse y alejarse.
   // Se permite zoom de 5 a 18; se limita el arrastre para no perder fácilmente la cuenca.
   app.maps.rain.setMinZoom(5);
   app.maps.rain.setMaxZoom(18);
-  app.maps.rain.setMaxBounds(basinBounds.pad(1.5));
+  app.maps.rain.setMaxBounds(basinBounds.pad(0.6));
   app.maps.rain.options.maxBoundsViscosity=0.65;
   app.maps.rain.dragging.enable();
   app.maps.rain.touchZoom.enable();
@@ -308,8 +316,8 @@ async function loadEcmwfRaster(){
   if(token!==ecmwfLoadToken)return;
   if(ecmwfLayer)app.maps.rain.removeLayer(ecmwfLayer);
   ecmwfRaster=geo;ecmwfLayer=layer;layer.addTo(app.maps.rain);
-  // El raster permanece en rainRasterPane (z-index 350): siempre sobre el mapa base
-  // y debajo de la cuenca, incluso al cambiar entre mapa base e imagen satelital.
+  // El raster permanece en rainRasterPane; el contorno de cuenca usa basinPane encima.
+  // Este mapa no carga capas base: solo muestra precipitación ECMWF y la cuenca.
   if(cuencaLayer)cuencaLayer.bringToFront();
   formatRainLegend(max);
   $('rainMapLabel').textContent=`ECMWF · intervalo 3 h · +${String(h).padStart(2,'0')} h`;
