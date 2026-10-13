@@ -228,8 +228,20 @@ async function loadCuenca(){
   const data=await fetchJson('shape/tumbes_cuenca.geojson');
   if(cuencaLayer)app.maps.rain.removeLayer(cuencaLayer);
   cuencaLayer=L.geoJSON(data,{style:{color:'#173f52',weight:2.5,opacity:.98,fillColor:'#25b7a5',fillOpacity:.035,dashArray:'6 4'},interactive:false}).addTo(app.maps.rain);
+  const basinBounds=cuencaLayer.getBounds();
+  if(basinBounds && basinBounds.isValid()){
+   // El encuadre inicial corresponde al polígono de la cuenca, no al raster completo.
+   app.maps.rain.fitBounds(basinBounds,{padding:[28,28],animate:false});
+   // Restringe el mapa al entorno inmediato de la cuenca y conserva el encuadre.
+   app.maps.rain.setMaxBounds(basinBounds.pad(0.04));
+   app.maps.rain.options.maxBoundsViscosity=1;
+   app.maps.rain.options.minZoom=app.maps.rain.getZoom();
+   app.maps.rain.options.maxZoom=app.maps.rain.getZoom();
+   rainBoundsLocked=true;
+   app.maps.rain.invalidateSize({pan:false});
+  }
   cuencaLayer.bringToFront();
-  console.info('Cuenca tumbes_cuenca.geojson cargada desde GitHub Pages.');
+  console.info('Cuenca tumbes_cuenca.geojson cargada desde GitHub Pages y mapa centrado en sus límites.');
  }catch(e){console.warn('No se pudo cargar ./shape/tumbes_cuenca.geojson. Verifica que esté publicado en GitHub Pages.',e)}
 }
 
@@ -272,17 +284,8 @@ async function loadEcmwfRaster(){
   if(ecmwfLayer)app.maps.rain.removeLayer(ecmwfLayer);
   ecmwfRaster=geo;ecmwfLayer=layer;layer.addTo(app.maps.rain);
   const bounds=layer.getBounds();
-  // Centrar y fijar el mapa una sola vez al dominio del primer GeoTIFF. Al cambiar horizonte,
-  // solo cambia la capa raster; no se recentra ni se desplaza el mapa.
-  if(bounds&&bounds.isValid()&&!rainBoundsLocked){
-   app.maps.rain.fitBounds(bounds,{padding:[12,12],animate:false});
-   app.maps.rain.setMaxBounds(bounds.pad(0.015));
-   app.maps.rain.options.maxBoundsViscosity=1;
-   app.maps.rain.options.minZoom=app.maps.rain.getZoom();
-   app.maps.rain.options.maxZoom=app.maps.rain.getZoom();
-   app.maps.rain.invalidateSize({pan:false});
-   rainBoundsLocked=true;
-  }
+  // El encuadre lo define tumbes_cuenca.geojson, no el dominio del GeoTIFF.
+  // Al cambiar de horizonte solo se reemplaza el raster y se mantiene la vista de la cuenca.
   formatRainLegend(max);
   $('rainMapLabel').textContent=`ECMWF · intervalo 3 h · +${String(h).padStart(2,'0')} h`;
   setRainStatus(`ECMWF · ciclo ${ecmwfCatalog.ciclo_utc||'—'} · válido ${item.fecha_peru||'—'} · GeoTIFF original cargado. Valor del raster: ${num(min)}–${num(max)} mm por píxel.`);
