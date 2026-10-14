@@ -228,41 +228,28 @@ salud.geojson, puentes.geojson, vias.geojson, cultivos.geojson, critica.geojson
 Son nombres previstos, no archivos ni pronósticos que ya existan.
 */
 
-let ecmwfCatalog=null, ecmwfRaster=null, ecmwfLayer=null, ecmwfLoadToken=0, ecmwfPaneName=null, rainBoundsLocked=false, cuencaLayer=null;
+let ecmwfCatalog=null, ecmwfRaster=null, ecmwfLayer=null, ecmwfLoadToken=0, ecmwfPaneName='rainRasterPane', rainBoundsLocked=false, cuencaLayer=null;
 const ecmwfHashesByHour=new Map();
 const ecmwfValueSignaturesByHour=new Map();
 function rasterValueSignature(geo){const band=geo&&geo.values&&geo.values[0];if(!band||!band.length)return '';const out=[];const ry=Math.max(1,Math.floor(band.length/32));for(let y=0;y<band.length;y+=ry){const row=band[y]||[];const rx=Math.max(1,Math.floor(row.length/32));for(let x=0;x<row.length;x+=rx){const v=Number(row[x]);out.push(Number.isFinite(v)?v.toPrecision(7):'N');}}return out.join(',');}
 async function sha256Hex(buffer){const digest=await crypto.subtle.digest('SHA-256',buffer);return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');}
-// Escala discreta de 10 intervalos recalculada para cada GeoTIFF seleccionado.
-// Los valores de cada hora determinan los límites de la leyenda y los colores.
-const RAIN_CLASS_COLORS=[
- '#e7f7ff','#b7e9ff','#78d4f5','#35b9e8','#3288bd',
- '#386cb0','#35a66f','#f1d83b','#f28e2b','#d73027'
-];
-function buildRainScale(minValue,maxValue){
- const min=Math.max(0,Number.isFinite(minValue)?minValue:0);
- const max=Number.isFinite(maxValue)&&maxValue>min?maxValue:(min+1);
- const breaks=Array.from({length:11},(_,i)=>min+(max-min)*i/10);
- return {min,max,breaks,colors:RAIN_CLASS_COLORS.slice()};
-}
-function rainColor(v,scale){
+// Paleta discreta de 10 clases. Los límites se recalculan para el GeoTIFF
+// elegido y la misma función se usa tanto para pintar el ráster como para la leyenda.
+const RAIN_CLASS_COLORS=['#e8f8ff','#b5eaff','#7bd5f7','#43b8ee','#3488e8','#315fce','#2ca66f','#f0dc38','#f28b32','#df3f3f'];
+function rainColorForRange(v,minValue,maxValue){
  if(!Number.isFinite(v)||v<0)return null;
  if(v===0)return 'rgba(255,255,255,0)';
- if(!scale)return 'rgba(120,190,230,0.85)';
- let idx=scale.breaks.findIndex((edge,i)=>i>0&&v<=edge)-1;
- if(idx<0)idx=9;
- idx=Math.max(0,Math.min(9,idx));
- return scale.colors[idx];
+ const lo=Number.isFinite(minValue)?minValue:0;
+ const hi=Number.isFinite(maxValue)&&maxValue>lo?maxValue:lo+1;
+ const t=Math.max(0,Math.min(0.999999,(v-lo)/(hi-lo)));
+ const idx=Math.max(0,Math.min(9,Math.floor(t*10)));
+ return RAIN_CLASS_COLORS[idx];
 }
 function setRainStatus(msg){$('rainRasterStatus').textContent=msg}
-function formatRainLegend(scale){
- if(!scale){$('ecmwfLegendScale').textContent='Esperando raster…';return;}
- const parts=[];
- for(let i=0;i<10;i++){
-  const a=scale.breaks[i],b=scale.breaks[i+1];
-  parts.push(`<span class="legend-interval"><i class="key" style="background:${scale.colors[i]};border:1px solid #d5e0e4"></i><span>${num(a)}–${num(b)} mm</span></span>`);
- }
- $('ecmwfLegendScale').innerHTML=`<span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${parts.join('')}</span>`;
+function formatRainLegend(minValue=0,maxValue=40){
+ const lo=Math.max(0,Number.isFinite(minValue)?minValue:0),hi=Number.isFinite(maxValue)&&maxValue>lo?maxValue:lo+1;
+ const cuts=Array.from({length:11},(_,i)=>lo+(hi-lo)*i/10);
+ $('ecmwfLegendScale').innerHTML=`<span style="display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap">${RAIN_CLASS_COLORS.map((c,i)=>`<span style="white-space:nowrap"><i class="key" style="background:${c};border:1px solid #d5e0e4"></i>${num(cuts[i])}–${num(cuts[i+1])} mm</span>`).join('')}</span>`;
 }
 async function loadCuenca(){
  try{
@@ -323,26 +310,28 @@ async function loadEcmwfRaster(){
  console.info('[ECMWF] selección solicitada:',{horizonte_h:h,item});
  if(!item){setRainStatus(`No existe un GeoTIFF ECMWF para el horizonte +${h} h.`);return}
  const token=++ecmwfLoadToken;
- // Leaflet mantiene un único pane estable para los rásteres. Se elimina la capa
- // anterior mediante la API de Leaflet (no se borra manualmente el pane del DOM),
- // porque quitar el pane mientras GeoRasterLayer lo usa puede dejar canvas huérfanos
- // y hacer que el nuevo horizonte no se pinte correctamente.
- if(ecmwfLayer){try{ecmwfLayer.remove()}catch(e){try{app.maps.rain.removeLayer(ecmwfLayer)}catch(_){}} ecmwfLayer=null}
+ // Retirar inmediatamente el ráster anterior. Así nunca queda visible mientras
+ // se descarga el nuevo horizonte ni se confunde una imagen vieja con la nueva.
+ if(ecmwfLayer){try{app.maps.rain.removeLayer(ecmwfLayer)}catch(e){} ecmwfLayer=null}
+ const rasterPaneBeforeLoad=app.maps.rain.getPane('rainRasterPane');if(rasterPaneBeforeLoad)rasterPaneBeforeLoad.replaceChildren();
  ecmwfRaster=null;
- ecmwfPaneName='rainRasterPane';
- const pane=app.maps.rain.getPane(ecmwfPaneName) || app.maps.rain.createPane(ecmwfPaneName);
+ // Reutilizar el pane estable del mapa. Leaflet mantiene internamente los panes;
+ // quitarlos directamente del DOM puede dejar referencias obsoletas y canvases fantasmas.
+ const pane=app.maps.rain.getPane('rainRasterPane');
+ if(!pane)throw new Error('No existe el panel rainRasterPane del mapa.');
  pane.style.zIndex='350';pane.style.pointerEvents='none';
+ // Después de retirar la capa anterior, vaciar cualquier canvas huérfano del pane.
+ pane.replaceChildren();
  setRainStatus(`Cargando ráster ECMWF +${String(h).padStart(2,'0')} h: ${item.archivo_origen||item.raster}…`);
  $('rainPixelValue').textContent='Cargando nuevo ráster…';
  try{
   const relativePath=String(item.raster||'').replace(/^\.\//,'');
   if(!relativePath)throw new Error('el catálogo no contiene la ruta del GeoTIFF para este horizonte');
-  // Resolver la ruta desde la URL real de GitHub Pages y solicitar el archivo
-  // indicado por ESTE elemento del catálogo; no reutilizar URL ni respuesta anterior.
-  const rasterUrl=new URL(relativePath,window.location.href);
-  rasterUrl.searchParams.set('_h',String(h));
-  rasterUrl.searchParams.set('_cb',String(Date.now())+'_'+token);
-  const response=await fetch(rasterUrl.href,{cache:'no-store',credentials:'same-origin'});
+  const rasterUrl=new URL(relativePath,document.baseURI);
+  // Evitar caché del navegador y distinguir cada horizonte durante la descarga.
+  rasterUrl.searchParams.set('horizonte',String(h));
+  rasterUrl.searchParams.set('_refresh',String(Date.now())+'_'+token);
+  const response=await fetch(rasterUrl.href,{cache:'no-store'});
   if(!response.ok)throw new Error('HTTP '+response.status+' al abrir '+relativePath);
   const buffer=await response.arrayBuffer();
   const sha256=await sha256Hex(buffer);
@@ -356,23 +345,19 @@ async function loadEcmwfRaster(){
   const previousSameHash=[...ecmwfHashesByHour.entries()].find(([otherHour,hash])=>Number(otherHour)!==h&&hash===sha256);
   const previousSameValues=[...ecmwfValueSignaturesByHour.entries()].find(([otherHour,sig])=>Number(otherHour)!==h&&sig===valueSignature&&valueSignature!=='');
   ecmwfHashesByHour.set(h,sha256);ecmwfValueSignaturesByHour.set(h,valueSignature);
-  const vals=(geo.values&&geo.values[0])||[];let min=Infinity,max=-Infinity,validCount=0;
-  for(let y=0;y<vals.length;y+=Math.max(1,Math.floor(vals.length/400)))for(let x=0;x<(vals[y]||[]).length;x+=Math.max(1,Math.floor((vals[y]||[]).length/400))){const v=Number(vals[y][x]);if(Number.isFinite(v)&&v>=0){min=Math.min(min,v);max=Math.max(max,v);validCount++}}
+  const vals=(geo.values&&geo.values[0])||[];let min=Infinity,max=-Infinity,positiveMin=Infinity,validCount=0;
+  for(let y=0;y<vals.length;y+=Math.max(1,Math.floor(vals.length/400)))for(let x=0;x<(vals[y]||[]).length;x+=Math.max(1,Math.floor((vals[y]||[]).length/400))){const v=Number(vals[y][x]);if(Number.isFinite(v)&&v>=0){min=Math.min(min,v);max=Math.max(max,v);if(v>0)positiveMin=Math.min(positiveMin,v);validCount++}}
   if(!validCount)throw new Error('el GeoTIFF no contiene valores de precipitación válidos');
   const selectedPane='rainRasterPane';
-  // Calcular límites y 10 clases con los valores del GeoTIFF de ESTA hora.
-  const rainScale=buildRainScale(min,max);
-  const layer=new GeoRasterLayer({georaster:geo,pane:selectedPane,opacity:0.88,resolution:512,pixelValuesToColorFn:values=>rainColor(Number(values[0]),rainScale)});
+  const colorMin=Number.isFinite(positiveMin)?positiveMin:0;const colorMax=Number.isFinite(max)&&max>colorMin?max:colorMin+1;
+  const layer=new GeoRasterLayer({georaster:geo,pane:selectedPane,opacity:1,resolution:512,pixelValuesToColorFn:values=>rainColorForRange(Number(values[0]),colorMin,colorMax)});
   if(token!==ecmwfLoadToken)return;
   // La capa anterior ya fue retirada; instalar solo la imagen del horizonte elegido.
-  ecmwfRaster=geo;ecmwfLayer=layer;layer.addTo(app.maps.rain);
-  // Forzar repintado en el pane estable tras el reemplazo de la capa.
-  if(typeof layer.redraw==='function')layer.redraw();
-  app.maps.rain.invalidateSize({pan:false});
+  ecmwfRaster=geo;ecmwfLayer=layer;layer.addTo(app.maps.rain);layer.redraw();
   if(cuencaLayer)cuencaLayer.bringToFront();
-  formatRainLegend(rainScale);
+  formatRainLegend(colorMin,colorMax);
   $('rainMapLabel').textContent=`ECMWF · intervalo 3 h · +${String(h).padStart(2,'0')} h`;
-  setRainStatus(`RÁSTER MOSTRADO: +${String(h).padStart(2,'0')} h · archivo ${item.archivo_origen||relativePath} · ruta ${relativePath} · URL solicitada ${rasterUrl.pathname} · ${(buffer.byteLength/1024).toFixed(1)} KB · SHA-256 ${sha256.slice(0,16)}… · rango ${num(min)}–${num(max)} mm · 10 intervalos dinámicos.` + (previousSameHash ? ` ADVERTENCIA: el archivo es idéntico byte a byte al horizonte +${String(previousSameHash[0]).padStart(2,'0')} h; revisar los GeoTIFF publicados/originales.` : previousSameValues ? ` ADVERTENCIA: los valores de píxel muestreados son iguales al horizonte +${String(previousSameValues[0]).padStart(2,'0')} h; revisar si se publicaron los rásteres correctos.` : '')); 
+  setRainStatus(`RÁSTER MOSTRADO: +${String(h).padStart(2,'0')} h · archivo ${item.archivo_origen||relativePath} · ruta solicitada ${relativePath} · URL recibida ${response.url} · ${(buffer.byteLength/1024).toFixed(1)} KB · SHA-256 ${sha256.slice(0,16)}… · rango ${num(min)}–${num(max)} mm · firma de valores ${valueSignature.slice(0,90)}…` + (previousSameHash ? ` ADVERTENCIA: archivo idéntico byte a byte al horizonte +${String(previousSameHash[0]).padStart(2,'0')} h.` : previousSameValues ? ` ADVERTENCIA: valores muestreados idénticos al horizonte +${String(previousSameValues[0]).padStart(2,'0')} h.` : '')); 
   $('rainPixelValue').textContent='Mueve el cursor sobre el ráster para consultar la precipitación del horizonte seleccionado.';
   app.maps.rain.invalidateSize({pan:false});
   console.info('ECMWF cargado para horizonte',h,'archivo',relativePath,'bytes',buffer.byteLength,'sha256',sha256,'rango',min,max,'token',token);
